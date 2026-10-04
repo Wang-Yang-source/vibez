@@ -172,6 +172,7 @@ func (r *LyricRenderer) renderCanvasInto(img *image.RGBA, l *LyricsModel, width,
 	}
 	if !l.canvasReady || l.canvasWidth != width || l.canvasHeight != height || absFloat(target-l.canvasTarget) > float64(height) {
 		l.canvasOffset = target
+		l.canvasVelocity = 0
 		l.canvasReady = true
 	}
 	l.canvasTarget = target
@@ -246,6 +247,7 @@ func (l *LyricsModel) ApplyCanvasLayout(frame *LyricsModel) bool {
 	l.canvasTarget = frame.canvasTarget
 	if !l.canvasReady || l.canvasWidth != frame.canvasWidth || l.canvasHeight != frame.canvasHeight || absFloat(l.canvasTarget-l.canvasOffset) > float64(frame.canvasHeight) {
 		l.canvasOffset = frame.canvasOffset
+		l.canvasVelocity = 0
 	}
 	l.canvasReady = frame.canvasReady
 	l.canvasWidth, l.canvasHeight = frame.canvasWidth, frame.canvasHeight

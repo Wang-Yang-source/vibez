@@ -16,6 +16,7 @@ import (
 type LyricsModel struct {
 	revision                   int
 	canvasOffset, canvasTarget float64
+	canvasVelocity             float64
 	canvasReady                bool
 	canvasWidth, canvasHeight  int
 	position                   time.Duration
@@ -45,6 +46,7 @@ func NewLyrics() *LyricsModel {
 // SetLoading transitions the panel into a fetching state.
 func (l *LyricsModel) SetLoading() {
 	l.canvasReady = false
+	l.canvasVelocity = 0
 	l.revision++
 	l.viewportReady = false
 	l.viewportMotion = 0
@@ -58,6 +60,7 @@ func (l *LyricsModel) SetLoading() {
 // SetLyrics transitions the panel to the loaded (or error) state.
 func (l *LyricsModel) SetLyrics(res *lyrics.Result, err error) {
 	l.canvasReady = false
+	l.canvasVelocity = 0
 	l.revision++
 	l.viewportReady = false
 	l.viewportMotion = 0

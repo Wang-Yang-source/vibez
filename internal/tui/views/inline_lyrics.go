@@ -1,12 +1,12 @@
 package views
 
 import (
-	"math"
 	"slices"
 	"strings"
 	"time"
 
 	"charm.land/lipgloss/v2"
+	"github.com/charmbracelet/harmonica"
 	"github.com/charmbracelet/x/ansi"
 	"github.com/simone-vibes/vibez/internal/lyrics"
 	"github.com/simone-vibes/vibez/internal/tui/styles"
@@ -141,11 +141,17 @@ func absInt(n int) int {
 // whole screen snaps immediately; normal lyric transitions glide into place.
 func (l *LyricsModel) AdvanceFrame() { l.AdvanceElapsed(time.Second / 30) }
 
-// Exponential easing is independent of display refresh and missed frames.
+// A critically damped spring keeps velocity through changing scroll targets.
+// Use actual elapsed time, so animation speed does not depend on refresh rate.
 func (l *LyricsModel) AdvanceElapsed(elapsed time.Duration) {
-	l.canvasOffset += (l.canvasTarget - l.canvasOffset) * (1 - math.Exp(-elapsed.Seconds()/0.1))
-	if absFloat(l.canvasTarget-l.canvasOffset) < 0.3 {
+	if elapsed <= 0 {
+		return
+	}
+	spring := harmonica.NewSpring(elapsed.Seconds(), 18, 1)
+	l.canvasOffset, l.canvasVelocity = spring.Update(l.canvasOffset, l.canvasVelocity, l.canvasTarget)
+	if absFloat(l.canvasTarget-l.canvasOffset) < 0.3 && absFloat(l.canvasVelocity) < 1 {
 		l.canvasOffset = l.canvasTarget
+		l.canvasVelocity = 0
 	}
 	if l.viewportOffset == l.viewportTarget {
 		l.viewportMotion = 0

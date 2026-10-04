@@ -59,3 +59,30 @@ func TestCanvasEasingIndependentOfRefresh(t *testing.T) {
 		t.Fatalf("refresh changed animation speed: %.3f vs %.3f", a.canvasOffset, b.canvasOffset)
 	}
 }
+
+func TestCanvasSpringRetainsVelocityAcrossTargetChanges(t *testing.T) {
+	l := NewLyrics()
+	l.canvasTarget = 300
+	l.AdvanceElapsed(time.Second / 120)
+	first := l.canvasOffset
+	l.AdvanceElapsed(time.Second / 120)
+	if l.canvasOffset-first <= first {
+		t.Fatal("spring must ease into scrolling")
+	}
+	velocity := l.canvasVelocity
+	l.canvasTarget = 450
+	l.AdvanceElapsed(time.Second / 120)
+	if l.canvasVelocity < velocity {
+		t.Fatal("new target reset scroll velocity")
+	}
+	for range 240 {
+		l.AdvanceElapsed(time.Second / 120)
+	}
+	if l.canvasOffset != 450 || l.canvasVelocity != 0 {
+		t.Fatal("spring did not settle")
+	}
+	l.SetLoading()
+	if l.canvasVelocity != 0 {
+		t.Fatal("new track retained scroll velocity")
+	}
+}
