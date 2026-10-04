@@ -542,6 +542,7 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		cmds = append(cmds, tick())
 
 	case glowTickMsg:
+		m.lyricsP.m.AdvanceFrame()
 		m.glowStep++
 		cmds = append(cmds, glowTick())
 
