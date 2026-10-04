@@ -1,6 +1,9 @@
 package tui
 
-import "strings"
+import (
+	"github.com/simone-vibes/vibez/internal/tui/art"
+	"strings"
+)
 
 func (m *Model) coverPanelSize(w, h int) (int, int) {
 	if !m.inlineLyrics {
@@ -30,4 +33,21 @@ func (m *Model) coverAndLyricsLines(w, h int) []string {
 		lines[i] = padRight(safeIdx(cover, i), cw) + "   " + padRight(safeIdx(lyrics, i), rw)
 	}
 	return lines
+}
+
+// Graphics synchronization needs dimensions, not a second rendering of the
+// entire text interface. Keep this arithmetic shared with the visible layout.
+func (m *Model) syncNowPlayingViewports() {
+	w, h := m.width-4, m.nowPlayingHeight()
+	cw, ch := m.coverPanelSize(w, h)
+	m.artworkViewport = art.Size{Width: cw, Height: ch}
+	m.lyricViewport = art.Size{}
+	if !m.inlineLyrics {
+		return
+	}
+	if w < 70 {
+		m.lyricViewport = art.Size{Width: w, Height: max(0, h-ch)}
+	} else {
+		m.lyricViewport = art.Size{Width: w - cw - 3, Height: h}
+	}
 }

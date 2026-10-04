@@ -18,11 +18,13 @@ const lyricImageID = 0x570001
 
 // Separate IDs and dimensions keep the lyric canvas independent of cover art.
 type lyricGraphics struct {
-	key     string
-	size    art.Size
-	visible bool
-	failed  bool
-	busy    bool
+	key             string
+	size            art.Size
+	visible         bool
+	failed          bool
+	busy            bool
+	placeholderSize art.Size
+	placeholders    []string
 }
 type lyricFrameMsg struct {
 	key      string
@@ -64,7 +66,11 @@ func (m *Model) largeLyricsAvailable() bool {
 func (m *Model) inlineLyricLines(w, h int) []string {
 	m.lyricViewport = art.Size{Width: w, Height: h}
 	if m.largeLyricsAvailable() && m.lyricsP.m.HasLyrics() && w >= 20 && h >= 6 {
-		return art.KittyLines(lyricImageID, m.lyricViewport)
+		if m.lyricGraphics.placeholderSize != m.lyricViewport || m.lyricGraphics.placeholders == nil {
+			m.lyricGraphics.placeholderSize = m.lyricViewport
+			m.lyricGraphics.placeholders = art.KittyLines(lyricImageID, m.lyricViewport)
+		}
+		return m.lyricGraphics.placeholders
 	}
 	return m.lyricsP.m.InlineLines(w, h)
 }
@@ -79,7 +85,7 @@ func (m *Model) syncLyricGraphics() tea.Cmd {
 		}
 		return nil
 	}
-	m.nowPlayingLines(m.width-4, m.nowPlayingHeight())
+	m.syncNowPlayingViewports()
 	size := m.lyricViewport
 	if size.Width < 20 || size.Height < 6 {
 		return nil
