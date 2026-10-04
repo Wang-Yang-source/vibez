@@ -138,10 +138,11 @@ func (p *aboutPanel) Back() bool   { return false }
 
 type playerStateMsg player.State
 type artworkLoadedMsg struct {
-	url string
-	gen int
-	img image.Image
-	err error
+	theme *styles.Theme
+	url   string
+	gen   int
+	img   image.Image
+	err   error
 }
 type searchResultMsg struct {
 	result *provider.SearchResult
@@ -300,6 +301,7 @@ type Model struct {
 	hideHints        bool
 	baseTheme        styles.Theme
 	musicTheme       string
+	coverThemeURL    string
 	supportsArtColor func() bool
 	artCellAsp       float64          // terminal cell height/width ratio, for square art
 	queueIDs         []string         // current playback queue (for "add to queue")
@@ -615,7 +617,7 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.artwork = artworkCache{url: s.Track.ArtworkURL, rendered: map[art.Size][]string{}}
 			// Only download covers while the art view is active; toggling
 			// :art on fetches the current track's cover on demand.
-			if m.artMode {
+			if m.artMode || m.cfg.CoverTheme {
 				cmds = append(cmds, m.fetchArtworkCmd(s.Track.ArtworkURL, m.artworkGen))
 			}
 		}
@@ -706,6 +708,11 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			break
 		}
 		m.artwork.img = msg.img
+		if m.cfg.CoverTheme && msg.theme != nil {
+			styles.Apply(*msg.theme)
+			m.coverThemeURL = msg.url
+			m.musicTheme = "cover"
+		}
 		m.artwork.failed = false
 		m.artwork.rendered = map[art.Size][]string{}
 
@@ -1646,11 +1653,18 @@ func (m *Model) fetchArtworkCmd(url string, gen int) tea.Cmd {
 		return nil
 	}
 	client := m.artHTTP
+	coverTheme, baseTheme := m.cfg.CoverTheme, m.baseTheme
 	return func() tea.Msg {
 		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 		defer cancel()
 		img, err := art.FetchAndDecode(ctx, client, url, 5<<20)
-		return artworkLoadedMsg{url: url, gen: gen, img: img, err: err}
+		var theme *styles.Theme
+		if err == nil && coverTheme {
+			if extracted, ok := themeFromCover(img, baseTheme); ok {
+				theme = &extracted
+			}
+		}
+		return artworkLoadedMsg{url: url, gen: gen, img: img, err: err, theme: theme}
 	}
 }
 

@@ -25,6 +25,8 @@ type Config struct {
 	Theme               string `json:"theme"`
 	// HideHints reclaims footer space; shortcuts remain active.
 	HideHints bool `json:"hide_hints,omitempty"`
+	// CoverTheme derives text and accent colors from the current artwork.
+	CoverTheme bool `json:"cover_theme,omitempty"`
 	// GenreTheme selects a built-in palette from the playing track genres.
 	GenreTheme   bool   `json:"genre_theme,omitempty"`
 	AudioQuality string `json:"audio_quality,omitempty"`

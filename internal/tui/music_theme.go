@@ -26,6 +26,16 @@ func musicThemeName(genres []string) string {
 }
 
 func (m *Model) syncMusicTheme(track *provider.Track) {
+	if m.cfg.CoverTheme {
+		if track == nil || track.ArtworkURL == "" || track.ArtworkURL != m.coverThemeURL {
+			if m.musicTheme != "base" {
+				styles.Apply(m.baseTheme)
+				m.musicTheme = "base"
+			}
+			m.coverThemeURL = ""
+		}
+		return
+	}
 	if track == nil || !m.cfg.GenreTheme {
 		return
 	}
