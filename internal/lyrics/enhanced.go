@@ -119,6 +119,10 @@ func (c *Client) fetchEnhanced(ctx context.Context, artist, title string, durati
 	if base == "" {
 		base = "https://music.163.com"
 	}
+	featured := ""
+	if match := featureSuffix.FindStringSubmatch(title); len(match) > 1 {
+		featured = normalizedCredit(match[1])
+	}
 	title = baseTitle(title)
 	var search struct {
 		Result struct {
@@ -144,6 +148,19 @@ func (c *Client) fetchEnhanced(ctx context.Context, artist, title string, durati
 		for _, a := range song.Artists {
 			if strings.EqualFold(strings.TrimSpace(a.Name), strings.TrimSpace(artist)) {
 				credited = true
+			}
+		}
+		if credited && featured != "" {
+			// A same-length solo edit must not replace the explicitly credited duet.
+			credits := normalizedCredit(song.Name)
+			for _, a := range song.Artists {
+				credits += " / " + normalizedCredit(a.Name)
+			}
+			for _, name := range strings.FieldsFunc(featured, func(r rune) bool { return strings.ContainsRune("/,&、", r) }) {
+				if !strings.Contains(credits, strings.TrimSpace(name)) {
+					credited = false
+					break
+				}
 			}
 		}
 		if credited {

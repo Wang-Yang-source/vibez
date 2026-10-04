@@ -9,7 +9,12 @@ import (
 	"net/url"
 	"regexp"
 	"strings"
+	"sync"
 	"time"
+
+	opencc "github.com/yanmingcao/opencc-go"
+	"github.com/yanmingcao/opencc-go/pkg/config"
+	"github.com/yanmingcao/opencc-go/pkg/embeddata"
 )
 
 type lyricRecord struct {
@@ -21,13 +26,35 @@ type lyricRecord struct {
 	Instrumental bool    `json:"instrumental"`
 }
 
-var featureSuffix = regexp.MustCompile(`(?i)\s*[（(]\s*(?:feat\.?|ft\.?|featuring)\s+[^)）]*[)）]\s*$`)
+var featureSuffix = regexp.MustCompile(`(?i)\s*[（(]\s*(?:feat\.?|ft\.?|featuring)\s+([^)）]*)[)）]\s*$`)
 
 func baseTitle(title string) string {
 	return strings.TrimSpace(featureSuffix.ReplaceAllString(title, ""))
 }
+
+// Go's Unicode normalization does not convert Chinese scripts. OpenCC reuses
+// the official dictionaries; initialization happens once, outside animation.
+var titleConverter = sync.OnceValues(func() (*opencc.SimpleConverter, error) {
+	data, err := embeddata.GetConfig("t2s")
+	if err != nil {
+		return nil, err
+	}
+	cfg, err := config.LoadConfigFromData(data, "")
+	if err != nil {
+		return nil, err
+	}
+	return opencc.NewSimpleConverterFromConfig(cfg)
+})
+
+func normalizedCredit(text string) string {
+	if converter, err := titleConverter(); err == nil {
+		text = converter.Convert(text)
+	}
+	return strings.ToLower(strings.TrimSpace(text))
+}
+
 func matchingTitle(candidate, title string) bool {
-	candidate, title = strings.ToLower(baseTitle(candidate)), strings.ToLower(baseTitle(title))
+	candidate, title = normalizedCredit(baseTitle(candidate)), normalizedCredit(baseTitle(title))
 	if candidate == title {
 		return true
 	}
