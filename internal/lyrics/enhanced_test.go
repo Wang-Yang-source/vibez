@@ -36,3 +36,27 @@ func TestWordTimingParsers(t *testing.T) {
 		t.Fatalf("YRC lost timing: %+v", y)
 	}
 }
+
+func TestYRCVoiceLabelsPreserveSungWordTimings(t *testing.T) {
+	lines := parseYRC("[1000,5000](1000,0,0)甲：(1000,1000,0)测试(4000,2000,0)结尾")
+	if len(lines) != 1 || lines[0].Speaker != "甲" || lines[0].Text != "测试结尾" {
+		t.Fatalf("voice label parse: %+v", lines)
+	}
+	if len(lines[0].Words) != 2 || lines[0].Words[1].Start != 4*time.Second {
+		t.Fatalf("voice label discarded real word timings: %+v", lines[0])
+	}
+	n, _ := Progress(lines[0], 6*time.Second, 3*time.Second)
+	if n != len("测试") {
+		t.Fatalf("highlight advanced through vocal gap: %d", n)
+	}
+}
+
+func TestYRCLabelInsideTimedTokenAndLabelOnlyRows(t *testing.T) {
+	lines := parseYRC("[1000,1000](1000,1000,0)【甲】测试\n[2000,1000](2000,1000,0)乙：\n[3000,1000](3000,1000,0)第二句")
+	if len(lines) != 2 || len(lines[0].Words) != 1 || lines[0].Words[0].Text != "测试" || lines[0].Words[0].Start != time.Second {
+		t.Fatalf("mixed token timing lost: %+v", lines)
+	}
+	if lines[1].Speaker != "乙" || lines[1].Words[0].Start != 3*time.Second {
+		t.Fatal("label-only row did not introduce next voice")
+	}
+}

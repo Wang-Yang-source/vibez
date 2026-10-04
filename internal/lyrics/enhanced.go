@@ -86,11 +86,25 @@ func parseYRC(text string) []Line {
 			plain.WriteString(word)
 			line.Words = append(line.Words, Word{Start: time.Duration(begin) * time.Millisecond, End: time.Duration(begin+length) * time.Millisecond, Text: word})
 		}
-		label, body := splitSpeaker(plain.String())
+		text := plain.String()
+		label, body := splitSpeaker(text)
 		if label != "" {
 			speaker = label
-			line.Words = nil
-		} // never retain label offsets as sung text
+			// Remove the label from the timed prefix, retaining timestamps for
+			// sung words. Falling back to a sentence estimate loses vocal gaps.
+			remaining := len(text) - len(body)
+			words := line.Words[:0]
+			for _, word := range line.Words {
+				if remaining >= len(word.Text) {
+					remaining -= len(word.Text)
+					continue
+				}
+				word.Text = word.Text[remaining:]
+				remaining = 0
+				words = append(words, word)
+			}
+			line.Words = words
+		}
 		line.Text, line.Speaker = body, speaker
 		if line.Text != "" {
 			lines = append(lines, line)
