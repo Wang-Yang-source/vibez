@@ -1,9 +1,10 @@
 package tui
 
 import (
+	"math"
+
 	tea "charm.land/bubbletea/v2"
 	"github.com/simone-vibes/vibez/internal/tui/art"
-	"math"
 )
 
 type artworkGraphics struct {

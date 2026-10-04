@@ -3,11 +3,12 @@ package art
 import (
 	"bytes"
 	"encoding/base64"
-	"github.com/charmbracelet/x/ansi"
 	"image"
 	"image/png"
 	"strings"
 	"testing"
+
+	"github.com/charmbracelet/x/ansi"
 )
 
 func TestKittyPreservesResolutionAndCellWidths(t *testing.T) {

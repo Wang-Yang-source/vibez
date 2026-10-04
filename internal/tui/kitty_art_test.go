@@ -1,10 +1,11 @@
 package tui
 
 import (
-	"github.com/simone-vibes/vibez/internal/provider"
 	"image"
 	"strings"
 	"testing"
+
+	"github.com/simone-vibes/vibez/internal/provider"
 )
 
 func TestGhosttyArtworkUsesImagePlaceholders(t *testing.T) {
