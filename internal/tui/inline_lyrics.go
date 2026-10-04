@@ -20,11 +20,11 @@ func (m *Model) coverAndLyricsLines(w, h int) []string {
 		cover = m.nowPlayingTextLines(cw, ch)
 	}
 	if w < 70 {
-		lines := append(cover, m.lyricsP.m.InlineLines(w, max(0, h-ch))...)
+		lines := append(cover, m.inlineLyricLines(w, max(0, h-ch))...)
 		return toLines(strings.Join(lines, "\n"), h)
 	}
 	rw := w - cw - 3
-	lyrics := m.lyricsP.m.InlineLines(rw, h)
+	lyrics := m.inlineLyricLines(rw, h)
 	lines := make([]string, h)
 	for i := range h {
 		lines[i] = padRight(safeIdx(cover, i), cw) + "   " + padRight(safeIdx(lyrics, i), rw)

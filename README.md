@@ -520,3 +520,24 @@ Apple Music's own lyric catalogue. Exact lookup misses retry with less specific
 metadata; bilingual/featured titles are matched with duration checks and
 ambiguous recordings are rejected. Network/service errors are shown separately
 from missing results. Press `y` to retry a failed request.
+
+### Large timed lyrics (fork)
+
+`"lyrics_font_scale": 1.8` renders enlarged lyrics using Kitty graphics on
+supported Ghostty/Kitty terminals. Other terminals retain the text layout.
+`"lyrics_font"` optionally chooses a system font; otherwise fontconfig selects a
+Chinese-capable sans font. No font files are bundled. The renderer reuses the
+existing graphics transport, uniseg grapheme segmentation, and BSD-licensed
+`golang.org/x/image` font rasterizer. The standard library has no OpenType
+rasterizer; terminal cell text cannot enlarge individual lyric lines on Ghostty.
+Dependencies are pinned in go.mod/go.sum, require Go 1.25 or older, and work with
+this project's Go 1.26 toolchain. License notices are in LICENSE.lyrics-font.
+
+`"enhanced_lyrics": true` first tries a public NetEase lyric lookup, then LRCLIB.
+Matching requires song title, credited artist, and recording duration. Playback
+still uses Apple Music. This is thin HTTP/JSON integration using the existing
+client and standard library; it does not require a separate Node/Rust music API
+server or encrypted account SDK. Explicit singer labels control left/right
+alignment and centered chorus lines. Word timestamps are used when supplied;
+otherwise the character sweep estimates progress uniformly within the phrase.
+Playback progress updates at 50 ms and lyric animation targets 30 frames/s.

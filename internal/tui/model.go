@@ -283,6 +283,9 @@ const radioMaxRetries = 5 // give up re-arming after this many consecutive failu
 // ── Model ─────────────────────────────────────────────────────────────────
 
 type Model struct {
+	lyricRenderer   *views.LyricRenderer
+	lyricGraphics   lyricGraphics
+	lyricViewport   art.Size
 	lastStateTime   time.Time
 	animationFrames int
 	ui              locale.Locale
@@ -469,6 +472,9 @@ func (m *Model) Init() tea.Cmd {
 		tick(),
 		glowTick(),
 		introTick(),
+	}
+	if m.cfg.LyricsFontScale > 1 && m.supportsArtGraphics != nil && m.supportsArtGraphics() {
+		cmds = append(cmds, m.loadLyricFontCmd())
 	}
 	if m.provider != nil {
 		cmds = append(cmds, m.library.Init())
@@ -728,6 +734,12 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 		if m.stateCh != nil {
 			cmds = append(cmds, waitForState(m.stateCh))
+		}
+
+	case lyricFontLoadedMsg:
+		m.lyricRenderer = msg.renderer
+		if msg.err != nil {
+			m.appendLog("[lyrics] font rendering unavailable: " + msg.err.Error())
 		}
 
 	case artworkLoadedMsg:
@@ -1216,7 +1228,7 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		cmds = append(cmds, libCmd)
 	}
 
-	cmds = append(cmds, m.syncArtworkGraphics())
+	cmds = append(cmds, m.syncArtworkGraphics(), m.syncLyricGraphics())
 	return m, tea.Batch(cmds...)
 }
 

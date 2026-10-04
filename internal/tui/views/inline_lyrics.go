@@ -143,6 +143,10 @@ func absInt(n int) int {
 // AdvanceFrame moves one terminal row per animation tick. Seeking across a
 // whole screen snaps immediately; normal lyric transitions glide into place.
 func (l *LyricsModel) AdvanceFrame() {
+	l.canvasOffset += (l.canvasTarget - l.canvasOffset) * 0.28
+	if absFloat(l.canvasTarget-l.canvasOffset) < 0.3 {
+		l.canvasOffset = l.canvasTarget
+	}
 	if l.viewportOffset < l.viewportTarget {
 		l.viewportOffset++
 	} else if l.viewportOffset > l.viewportTarget {

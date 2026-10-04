@@ -28,8 +28,10 @@ type Config struct {
 	// HideHints reclaims footer space; shortcuts remain active.
 	HideHints bool `json:"hide_hints,omitempty"`
 	// InlineLyrics places rolling lyrics beside the cover.
-	EnhancedLyrics bool `json:"enhanced_lyrics,omitempty"`
-	InlineLyrics   bool `json:"inline_lyrics,omitempty"`
+	LyricsFontScale float64 `json:"lyrics_font_scale,omitempty"`
+	LyricsFont      string  `json:"lyrics_font,omitempty"`
+	EnhancedLyrics  bool    `json:"enhanced_lyrics,omitempty"`
+	InlineLyrics    bool    `json:"inline_lyrics,omitempty"`
 	// CoverTheme derives text and accent colors from the current artwork.
 	CoverTheme bool `json:"cover_theme,omitempty"`
 	// GenreTheme selects a built-in palette from the playing track genres.

@@ -14,23 +14,27 @@ import (
 // Call SetLoading when a fetch starts, SetLyrics when it completes, and
 // SetPosition on every player-state update so the current line is highlighted.
 type LyricsModel struct {
-	position       time.Duration
-	duration       time.Duration
-	notFound       bool
-	Locale         locale.Locale
-	lines          []lyrics.Line
-	synced         bool
-	loading        bool
-	errMsg         string
-	viewportOffset int
-	viewportTarget int
-	viewportReady  bool
-	viewportWidth  int
-	viewportHeight int
-	currentIdx     int // index of the currently active line (-1 = none)
-	scroll         int // index of the top visible line
-	width          int
-	height         int
+	revision                   int
+	canvasOffset, canvasTarget float64
+	canvasReady                bool
+	canvasWidth, canvasHeight  int
+	position                   time.Duration
+	duration                   time.Duration
+	notFound                   bool
+	Locale                     locale.Locale
+	lines                      []lyrics.Line
+	synced                     bool
+	loading                    bool
+	errMsg                     string
+	viewportOffset             int
+	viewportTarget             int
+	viewportReady              bool
+	viewportWidth              int
+	viewportHeight             int
+	currentIdx                 int // index of the currently active line (-1 = none)
+	scroll                     int // index of the top visible line
+	width                      int
+	height                     int
 }
 
 func NewLyrics() *LyricsModel {
@@ -39,6 +43,8 @@ func NewLyrics() *LyricsModel {
 
 // SetLoading transitions the panel into a fetching state.
 func (l *LyricsModel) SetLoading() {
+	l.canvasReady = false
+	l.revision++
 	l.viewportReady = false
 	l.loading = true
 	l.lines = nil
@@ -49,6 +55,8 @@ func (l *LyricsModel) SetLoading() {
 
 // SetLyrics transitions the panel to the loaded (or error) state.
 func (l *LyricsModel) SetLyrics(res *lyrics.Result, err error) {
+	l.canvasReady = false
+	l.revision++
 	l.viewportReady = false
 	l.loading = false
 	if err != nil {
