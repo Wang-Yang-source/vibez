@@ -26,6 +26,7 @@ type LyricsModel struct {
 	synced                     bool
 	loading                    bool
 	errMsg                     string
+	viewportMotion             float64
 	viewportOffset             int
 	viewportTarget             int
 	viewportReady              bool
@@ -46,6 +47,7 @@ func (l *LyricsModel) SetLoading() {
 	l.canvasReady = false
 	l.revision++
 	l.viewportReady = false
+	l.viewportMotion = 0
 	l.loading = true
 	l.lines = nil
 	l.errMsg = ""
@@ -58,6 +60,7 @@ func (l *LyricsModel) SetLyrics(res *lyrics.Result, err error) {
 	l.canvasReady = false
 	l.revision++
 	l.viewportReady = false
+	l.viewportMotion = 0
 	l.loading = false
 	if err != nil {
 		l.errMsg = err.Error()

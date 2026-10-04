@@ -127,7 +127,7 @@ func runTUI(_ *cobra.Command, _ []string) error {
 		opts.InitialTracks = tracks
 		opts.Backend = "Local mode · playing from " + cfg.MusicDir
 		opts.ScanNotice = prov.ScanNotice()
-		prog := tea.NewProgram(tui.New(cfg, prov, plyr, opts))
+		prog := tea.NewProgram(tui.New(cfg, prov, plyr, opts), tea.WithFPS(120))
 		stopRPC := startDiscordRPC(cfg, plyr, func(msg string) { prog.Send(tui.DebugLogMsg(msg)) })
 		defer stopRPC()
 		_, err = prog.Run()
@@ -141,7 +141,7 @@ func runTUI(_ *cobra.Command, _ []string) error {
 		dp := demoProvider.Provider{}
 		opts.IconPath = iconPath
 		opts.Backend = "Demo mode · built-in fake tracks, no credentials required"
-		prog := tea.NewProgram(tui.New(cfg, dp, p, opts))
+		prog := tea.NewProgram(tui.New(cfg, dp, p, opts), tea.WithFPS(120))
 		_, err = prog.Run()
 		return err
 	}

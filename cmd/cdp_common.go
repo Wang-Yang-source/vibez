@@ -29,7 +29,7 @@ type cdpPlatformHooks struct {
 }
 
 func runCDPFlow(cfg *config.Config, opts tui.Options, onUserToken, onStorefront func(string), audioBitrateKbps int, hooks cdpPlatformHooks) error {
-	prog := tea.NewProgram(tui.New(cfg, nil, nil, opts))
+	prog := tea.NewProgram(tui.New(cfg, nil, nil, opts), tea.WithFPS(120))
 	playerCh := make(chan *cdp.Player, 1)
 	runDone := make(chan struct{})
 	restartExe := make(chan string, 1)

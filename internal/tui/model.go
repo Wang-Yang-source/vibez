@@ -283,15 +283,18 @@ const radioMaxRetries = 5 // give up re-arming after this many consecutive failu
 // ── Model ─────────────────────────────────────────────────────────────────
 
 type Model struct {
-	lyricRenderer   *views.LyricRenderer
-	lyricGraphics   lyricGraphics
-	lyricViewport   art.Size
-	lastStateTime   time.Time
-	animationFrames int
-	ui              locale.Locale
-	cfg             *config.Config
-	provider        provider.Provider
-	player          player.Player
+	lyricRenderer    *views.LyricRenderer
+	lyricGraphics    lyricGraphics
+	lyricViewport    art.Size
+	lastStateTime    time.Time
+	frameRate        int
+	lastFrameTime    time.Time
+	lastRefreshProbe time.Time
+	glowElapsed      time.Duration
+	ui               locale.Locale
+	cfg              *config.Config
+	provider         provider.Provider
+	player           player.Player
 
 	width, height int
 
@@ -470,7 +473,7 @@ func New(cfg *config.Config, prov provider.Provider, plyr player.Player, opts Op
 func (m *Model) Init() tea.Cmd {
 	cmds := []tea.Cmd{
 		tick(),
-		glowTick(),
+		m.animationTick(), detectRefreshRate(),
 		introTick(),
 	}
 	if m.cfg.LyricsFontScale > 1 && m.supportsArtGraphics != nil && m.supportsArtGraphics() {
@@ -489,10 +492,6 @@ func (m *Model) Init() tea.Cmd {
 
 func tick() tea.Cmd {
 	return tea.Tick(time.Second, func(t time.Time) tea.Msg { return tickMsg(t) })
-}
-
-func glowTick() tea.Cmd {
-	return tea.Tick(time.Second/30, func(t time.Time) tea.Msg { return glowTickMsg(t) })
 }
 
 func introTick() tea.Cmd {
@@ -545,23 +544,38 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.aboutP.SetSize(contentW, panelH)
 
 	case tickMsg:
+		if !m.lastRefreshProbe.IsZero() && time.Since(m.lastRefreshProbe) > 15*time.Second {
+			m.lastRefreshProbe = time.Now()
+			cmds = append(cmds, detectRefreshRate())
+		}
 		if m.errMsg != "" && time.Now().After(m.errExpiry) {
 			m.errMsg = ""
 		}
 		cmds = append(cmds, tick())
 
+	case refreshRateMsg:
+		m.lastRefreshProbe = time.Now()
+		m.frameRate = int(msg)
+
 	case glowTickMsg:
+		now := time.Time(msg)
+		elapsed := m.frameInterval()
+		if !m.lastFrameTime.IsZero() {
+			elapsed = max(0, now.Sub(m.lastFrameTime))
+		}
+		m.lastFrameTime = now
 		position := m.playerState.Position
 		if m.playerState.Playing && !m.playerState.Loading && !m.lastStateTime.IsZero() {
 			position += min(max(0, time.Time(msg).Sub(m.lastStateTime)), 250*time.Millisecond)
 		}
 		m.lyricsP.m.SetPosition(position)
-		m.lyricsP.m.AdvanceFrame()
-		m.animationFrames++
-		if m.animationFrames%3 == 0 {
+		m.lyricsP.m.AdvanceElapsed(elapsed)
+		m.glowElapsed += elapsed
+		for m.glowElapsed >= 100*time.Millisecond {
 			m.glowStep++
+			m.glowElapsed -= 100 * time.Millisecond
 		}
-		cmds = append(cmds, glowTick())
+		cmds = append(cmds, m.animationTick())
 
 	case introTickMsg:
 		if m.introStep != introDone {

@@ -41,3 +41,21 @@ func TestLyricsWrapSpaceAndAnimate(t *testing.T) {
 		t.Fatal("seek did not update active lyric")
 	}
 }
+
+func TestCanvasEasingIndependentOfRefresh(t *testing.T) {
+	a, b := NewLyrics(), NewLyrics()
+	a.canvasTarget, b.canvasTarget = 300, 300
+	a.viewportTarget, b.viewportTarget = 300, 300
+	for i := 0; i < 30; i++ {
+		a.AdvanceElapsed(time.Second / 30)
+	}
+	for i := 0; i < 120; i++ {
+		b.AdvanceElapsed(time.Second / 120)
+	}
+	if a.viewportOffset != b.viewportOffset {
+		t.Fatalf("text scrolling depends on refresh: %d vs %d", a.viewportOffset, b.viewportOffset)
+	}
+	if absFloat(a.canvasOffset-b.canvasOffset) > 0.01 {
+		t.Fatalf("refresh changed animation speed: %.3f vs %.3f", a.canvasOffset, b.canvasOffset)
+	}
+}

@@ -1,8 +1,10 @@
 package views
 
 import (
+	"math"
 	"slices"
 	"strings"
+	"time"
 
 	"charm.land/lipgloss/v2"
 	"github.com/charmbracelet/x/ansi"
@@ -137,14 +139,24 @@ func absInt(n int) int {
 
 // AdvanceFrame moves one terminal row per animation tick. Seeking across a
 // whole screen snaps immediately; normal lyric transitions glide into place.
-func (l *LyricsModel) AdvanceFrame() {
-	l.canvasOffset += (l.canvasTarget - l.canvasOffset) * 0.28
+func (l *LyricsModel) AdvanceFrame() { l.AdvanceElapsed(time.Second / 30) }
+
+// Exponential easing is independent of display refresh and missed frames.
+func (l *LyricsModel) AdvanceElapsed(elapsed time.Duration) {
+	l.canvasOffset += (l.canvasTarget - l.canvasOffset) * (1 - math.Exp(-elapsed.Seconds()/0.1))
 	if absFloat(l.canvasTarget-l.canvasOffset) < 0.3 {
 		l.canvasOffset = l.canvasTarget
 	}
+	if l.viewportOffset == l.viewportTarget {
+		l.viewportMotion = 0
+		return
+	}
+	l.viewportMotion += elapsed.Seconds() * 30
+	step := int(l.viewportMotion + 1e-5)
+	l.viewportMotion -= float64(step)
 	if l.viewportOffset < l.viewportTarget {
-		l.viewportOffset++
-	} else if l.viewportOffset > l.viewportTarget {
-		l.viewportOffset--
+		l.viewportOffset = min(l.viewportTarget, l.viewportOffset+step)
+	} else {
+		l.viewportOffset = max(l.viewportTarget, l.viewportOffset-step)
 	}
 }
