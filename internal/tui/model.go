@@ -283,10 +283,12 @@ const radioMaxRetries = 5 // give up re-arming after this many consecutive failu
 // ── Model ─────────────────────────────────────────────────────────────────
 
 type Model struct {
-	ui       locale.Locale
-	cfg      *config.Config
-	provider provider.Provider
-	player   player.Player
+	lastStateTime   time.Time
+	animationFrames int
+	ui              locale.Locale
+	cfg             *config.Config
+	provider        provider.Provider
+	player          player.Player
 
 	width, height int
 
@@ -484,7 +486,7 @@ func tick() tea.Cmd {
 }
 
 func glowTick() tea.Cmd {
-	return tea.Tick(100*time.Millisecond, func(t time.Time) tea.Msg { return glowTickMsg(t) })
+	return tea.Tick(time.Second/30, func(t time.Time) tea.Msg { return glowTickMsg(t) })
 }
 
 func introTick() tea.Cmd {
@@ -543,8 +545,16 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		cmds = append(cmds, tick())
 
 	case glowTickMsg:
+		position := m.playerState.Position
+		if m.playerState.Playing && !m.playerState.Loading && !m.lastStateTime.IsZero() {
+			position += min(max(0, time.Time(msg).Sub(m.lastStateTime)), 250*time.Millisecond)
+		}
+		m.lyricsP.m.SetPosition(position)
 		m.lyricsP.m.AdvanceFrame()
-		m.glowStep++
+		m.animationFrames++
+		if m.animationFrames%3 == 0 {
+			m.glowStep++
+		}
 		cmds = append(cmds, glowTick())
 
 	case introTickMsg:
@@ -709,6 +719,7 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			cmds = append(cmds, m.runRadioSearch())
 		}
 		m.playerState = s
+		m.lastStateTime = time.Now()
 		if !wasPlaying && m.playerState.Playing {
 			m.appendLog("[player] playing")
 		} else if wasPlaying && !m.playerState.Playing && !m.playerState.Loading {

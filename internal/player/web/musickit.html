@@ -213,7 +213,7 @@
           const m = _m();
           const item = m.nowPlayingItem;
           const currentTime = m.currentPlaybackTime;
-          const snap = m.isPlaying + '|' + m.playbackState + '|' + Math.floor(currentTime) + '|' +
+          const snap = m.isPlaying + '|' + m.playbackState + '|' + Math.floor(currentTime * 20) + '|' +
             (item ? item.id : '') + '|' + m.volume + '|' + m.repeatMode + '|' + m.shuffleMode;
           if (snap === _lastStateJSON) return;
           _lastStateJSON = snap;
@@ -223,9 +223,9 @@
         music.addEventListener('playbackStateDidChange',  notifyState);
         music.addEventListener('nowPlayingItemDidChange', notifyState);
 
-        // Poll position every 200 ms so the TUI timer advances and transitions
+        // Poll position every 50 ms so the TUI timer advances and transitions
         // (completed → loading → playing) reach Go without delay.
-        setInterval(notifyStateIfChanged, 200);
+        setInterval(notifyStateIfChanged, 50);
 
         // Shorthand: send a debug-only log entry (never shown in status bar).
         const _stateN = ['none','loading','playing','paused','stopped','ended','seekFwd','seekBwd','waiting','completed','completed'];

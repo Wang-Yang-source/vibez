@@ -2834,7 +2834,9 @@ func TestCommandLines_Empty(t *testing.T) {
 func TestModel_Update_GlowTickMsg(t *testing.T) {
 	m := newModel(nil)
 	step := m.glowStep
-	_, _ = m.Update(glowTickMsg(time.Now()))
+	for i := 0; i < 3; i++ {
+		_, _ = m.Update(glowTickMsg(time.Now()))
+	}
 	if m.glowStep != step+1 {
 		t.Errorf("glowStep = %d, want %d", m.glowStep, step+1)
 	}
