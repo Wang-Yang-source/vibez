@@ -46,7 +46,7 @@ func (m *Model) loadLyricFontCmd() tea.Cmd {
 		if path == "" {
 			ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
 			defer cancel()
-			out, err := exec.CommandContext(ctx, "fc-match", "-f", "%{file}\n%{index}\n", "sans:lang=zh-cn").Output()
+			out, err := exec.CommandContext(ctx, "fc-match", "-f", "%{file}\n%{index}\n", "sans:lang=zh-cn:weight=bold").Output()
 			if err != nil {
 				return lyricFontLoadedMsg{err: err}
 			}

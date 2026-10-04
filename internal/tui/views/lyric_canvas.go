@@ -97,8 +97,8 @@ func (r *LyricRenderer) renderCanvasInto(img *image.RGBA, l *LyricsModel, width,
 	scale := r.pixelScale
 	em := r.baseSize * scale
 	lineH := int(math.Ceil(em * 1.18))
-	blockW := min(max(1, width-int(48*scale)), int(780*scale))
-	inset := (width - blockW) / 2
+	blockW := min(max(1, int(float64(width)*.82)), int(620*scale))
+	inset := int(float64(width) * .07)
 	anchor := max(0, l.currentIdx)
 	for anchor > 0 && l.synced && l.currentIdx >= 0 && l.lines[anchor-1].Start == l.lines[l.currentIdx].Start {
 		anchor--
@@ -138,7 +138,7 @@ func (r *LyricRenderer) renderCanvasInto(img *image.RGBA, l *LyricsModel, width,
 			phrases = append(phrases, canvasPhrase{text: text[start:], source: i, offset: offset, y: cursor})
 			cursor += lineH
 			if i+1 == len(l.lines) || !l.synced || line.Start != l.lines[i+1].Start {
-				cursor += max(3, int(math.Ceil(em*.22)))
+				cursor += max(3, int(math.Ceil(em*.65)))
 			}
 		}
 		for i := range phrases {
@@ -166,7 +166,8 @@ func (r *LyricRenderer) renderCanvasInto(img *image.RGBA, l *LyricsModel, width,
 	phrases := r.phrases
 	anchorY := r.lineY[anchor]
 
-	target := float64(anchorY - height/2)
+	focusY := int(float64(height) * .42)
+	target := float64(anchorY + face.Metrics().Ascent.Ceil() - focusY)
 	if !l.synced {
 		target = float64(l.scroll * lineH)
 	}
@@ -185,32 +186,42 @@ func (r *LyricRenderer) renderCanvasInto(img *image.RGBA, l *LyricsModel, width,
 		}
 		active := l.lineActive(phrase.source)
 		x, textW := phrase.x, phrase.width
-		dim := color.NRGBAModel.Convert(muted).(color.NRGBA)
-		distance := absInt(y - height/2)
-		if distance > height/3 {
-			dim.A = 115
-		} else if distance > height/5 {
-			dim.A = 190
+		// Keep the focus bright and readable; fade surrounding lines continuously
+		// instead of switching between three abrupt opacity bands.
+		dim := color.NRGBA{R: 255, G: 255, B: 255, A: 115}
+		distance := absFloat(float64(y-focusY)) / float64(max(1, height))
+		dim.A = uint8(max(30, 115*(1-min(1, distance*1.8))))
+		if active {
+			dim.A = 135
 		}
 		bounds := phrase.mask.Bounds().Add(image.Pt(x, y)).Intersect(img.Bounds())
 		draw.DrawMask(img, bounds, image.NewUniform(dim), image.Point{}, phrase.mask, bounds.Min.Sub(image.Pt(x, y)), draw.Over)
 		if active || !l.synced {
-			highlight := textW
+			highlight := float64(textW)
 			if l.synced {
 				complete, partial := l.lineProgress(phrase.source)
 				complete += len(l.speakerPrefix(phrase.source))
 				complete = min(max(0, complete-phrase.offset), len(phrase.text))
-				highlight = font.MeasureString(face, phrase.text[:complete]).Ceil()
+				highlight = float64(font.MeasureString(face, phrase.text[:complete])) / 64
 				if complete < len(phrase.text) {
 					g := uniseg.NewGraphemes(phrase.text[complete:])
 					if g.Next() {
-						highlight += int(float64(font.MeasureString(face, g.Str()).Ceil()) * partial)
+						highlight += float64(font.MeasureString(face, g.Str())) / 64 * partial
 					}
 				}
 			}
-			area := image.Rect(x, max(0, y-fontH), x+highlight+1, min(height, y+fontH/3)).Intersect(img.Bounds())
 			if highlight > 0 {
-				draw.DrawMask(img, area, image.NewUniform(fg), image.Point{}, phrase.mask, area.Min.Sub(image.Pt(x, y)), draw.Over)
+				// Feather the advancing boundary without blurring the glyphs.
+				feather := max(2, int(em*.18))
+				right := float64(x) + highlight
+				solidRight := max(x, int(right)-feather)
+				area := image.Rect(x, max(0, y-fontH), solidRight, min(height, y+fontH/3)).Intersect(img.Bounds())
+				draw.DrawMask(img, area, image.White, image.Point{}, phrase.mask, area.Min.Sub(image.Pt(x, y)), draw.Over)
+				for column := solidRight; column < int(math.Ceil(right)); column++ {
+					alpha := uint8(255 * min(1, max(0, (right-float64(column))/float64(feather))))
+					edge := image.Rect(column, max(0, y-fontH), column+1, min(height, y+fontH/3)).Intersect(img.Bounds())
+					draw.DrawMask(img, edge, image.NewUniform(color.NRGBA{R: 255, G: 255, B: 255, A: alpha}), image.Point{}, phrase.mask, edge.Min.Sub(image.Pt(x, y)), draw.Over)
+				}
 			}
 		}
 	}

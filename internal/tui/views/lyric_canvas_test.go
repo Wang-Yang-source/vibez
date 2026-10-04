@@ -68,8 +68,8 @@ func TestLyricCanvasUsesCompactPhraseSpacing(t *testing.T) {
 	r.RenderCanvas(l, 800, 400)
 	height := r.face.Metrics().Height.Ceil()
 	gap := r.lineY[1] - r.lineY[0]
-	if gap > height*3/2 || gap < height {
-		t.Fatalf("paragraph spacing is not compact/readable: %d for font height %d", gap, height)
+	if gap > height*2 || gap < height {
+		t.Fatalf("paragraph spacing is not readable: %d for font height %d", gap, height)
 	}
 	if err := r.SetPixelScale(2); err != nil {
 		t.Fatal(err)
@@ -77,7 +77,7 @@ func TestLyricCanvasUsesCompactPhraseSpacing(t *testing.T) {
 	r.RenderCanvas(l, 1600, 800)
 	height = r.face.Metrics().Height.Ceil()
 	gap = r.lineY[1] - r.lineY[0]
-	if gap > height*3/2 || gap < height {
+	if gap > height*2 || gap < height {
 		t.Fatal("spacing changes proportion at native pixel density")
 	}
 }
