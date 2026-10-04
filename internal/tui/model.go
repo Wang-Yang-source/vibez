@@ -287,7 +287,7 @@ type Model struct {
 	lyricRenderer      *views.LyricRenderer
 	lyricGraphics      lyricGraphics
 	lyricViewport      art.Size
-	lastStateTime      time.Time
+	lyricClock         lyricClock
 	terminalBackground color.Color
 	frameRate          int
 	lastFrameTime      time.Time
@@ -570,11 +570,7 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			elapsed = max(0, now.Sub(m.lastFrameTime))
 		}
 		m.lastFrameTime = now
-		position := m.playerState.Position
-		if m.playerState.Playing && !m.playerState.Loading && !m.lastStateTime.IsZero() {
-			position += min(max(0, time.Time(msg).Sub(m.lastStateTime)), 250*time.Millisecond)
-		}
-		m.lyricsP.m.SetPosition(position)
+		m.lyricsP.m.SetPosition(m.lyricPosition(now))
 		m.lyricsP.m.AdvanceElapsed(elapsed)
 		m.glowElapsed += elapsed
 		for m.glowElapsed >= 100*time.Millisecond {
@@ -600,6 +596,7 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case playerStateMsg:
 		wasPlaying := m.playerState.Playing
 		s := player.State(msg)
+		m.lyricClock.observe(s, time.Now())
 		m.localizePlaybackMetadata(&s)
 		m.syncMusicTheme(s.Track)
 		for _, line := range s.Logs {
@@ -720,7 +717,7 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		// Always sync playback position so the current lyrics line stays highlighted.
 		if s.Track != nil {
 			m.lyricsP.m.SetDuration(s.Track.Duration)
-			m.lyricsP.m.SetPosition(s.Position)
+			m.lyricsP.m.SetPosition(m.lyricPosition(time.Now()))
 		}
 		// Discovery: in auto mode, fire as soon as the last track in the queue
 		// starts playing. Triggering at the start of the last track gives the
@@ -746,7 +743,6 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			cmds = append(cmds, m.runRadioSearch())
 		}
 		m.playerState = s
-		m.lastStateTime = time.Now()
 		if !wasPlaying && m.playerState.Playing {
 			m.appendLog("[player] playing")
 		} else if wasPlaying && !m.playerState.Playing && !m.playerState.Loading {
@@ -807,7 +803,7 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		// Discard stale results if the user skipped to a different track.
 		if msg.trackID == m.lastLyricsTrackID {
 			m.lyricsP.m.SetLyrics(msg.result, msg.err)
-			m.lyricsP.m.SetPosition(m.playerState.Position)
+			m.lyricsP.m.SetPosition(m.lyricPosition(time.Now()))
 			if msg.err != nil {
 				m.appendLog(fmt.Sprintf("[lyrics] not found: %v", msg.err))
 			} else {
