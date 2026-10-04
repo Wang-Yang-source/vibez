@@ -635,7 +635,7 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				cmds = append(cmds, m.fetchArtworkCmd(s.Track.ArtworkURL, m.artworkGen))
 			}
 		}
-		if s.Track != nil && (m.playerState.Track == nil || m.playerState.Track.Title != s.Track.Title) {
+		if s.Track != nil && (m.playerState.Track == nil || views.PlaybackID(*m.playerState.Track) != views.PlaybackID(*s.Track)) {
 			m.appendLog("[playing] " + s.Track.Artist + " — " + s.Track.Title)
 			// Log playParams so we can confirm which ID path MusicKit will use.
 			trackType := "catalog"
@@ -649,6 +649,18 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.appendLog(pp)
 			// Check whether the new track is already loved on Apple Music.
 			cmds = append(cmds, m.checkSongRatingCmd(s.Track))
+			// Auto-scroll mini-queue to keep the current track visible.
+			for i, t := range m.queueTracks {
+				if t.Title == s.Track.Title {
+					visibleRows := max(0, m.panelHeight()-2)
+					if visibleRows > 0 && (i < m.queueMiniOffset || i >= m.queueMiniOffset+visibleRows) {
+						m.queueMiniOffset = max(0, i-visibleRows/2)
+					}
+					break
+				}
+			}
+		}
+		if s.Track != nil {
 			// Fetch lyrics for the new track: immediately if the panel is
 			// visible, otherwise mark stale so the fetch is deferred until
 			// the user opens the panel (lazy loading).
@@ -660,16 +672,6 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					cmds = append(cmds, m.fetchLyricsCmd(s.Track))
 				} else {
 					m.lastLyricsTrackID = "" // stale; will fetch on panel open
-				}
-			}
-			// Auto-scroll mini-queue to keep the current track visible.
-			for i, t := range m.queueTracks {
-				if t.Title == s.Track.Title {
-					visibleRows := max(0, m.panelHeight()-2)
-					if visibleRows > 0 && (i < m.queueMiniOffset || i >= m.queueMiniOffset+visibleRows) {
-						m.queueMiniOffset = max(0, i-visibleRows/2)
-					}
-					break
 				}
 			}
 		}
