@@ -3357,7 +3357,7 @@ func (m *Model) nowPlayingArtLines(contentW, h int) []string {
 
 	size := m.artworkSize(contentW, h)
 	artRows, artCols := size.Height, size.Width
-	artRegion := h - 4
+	artRegion := h - m.artworkMetadataRows()
 	if artRows < 2 || artCols < 4 {
 		return m.nowPlayingTextLines(contentW, h)
 	}
@@ -3407,7 +3407,17 @@ func (m *Model) nowPlayingArtLines(contentW, h int) []string {
 		ansi.Truncate(styles.NowPlayingAlbum.Render(t.Album+" • ")+styles.TimeStyle.Render(elapsed+" / "+total), contentW, "…"),
 		contentW,
 	)
-	lines = append(lines, "", trackLine, albumLine, m.statusLine(contentW))
+	if m.artworkMetadataRows() == 5 {
+		// Align metadata with the cover's left edge in the split lyric view.
+		margin := strings.Repeat(" ", max(0, (contentW-artCols)/2))
+		labelWidth := min(artCols, contentW-len(margin))
+		title := margin + ansi.Truncate(titleStr, labelWidth, "…")
+		artist := margin + ansi.Truncate(styles.NowPlayingArtist.Render(t.Artist), labelWidth, "…")
+		timing := margin + ansi.Truncate(styles.TimeStyle.Render(elapsed+" / "+total), labelWidth, "…")
+		lines = append(lines, "", title, artist, timing, m.statusLine(contentW))
+	} else {
+		lines = append(lines, "", trackLine, albumLine, m.statusLine(contentW))
+	}
 	return lines
 }
 

@@ -19,7 +19,7 @@ func (m *Model) artworkSize(contentW, h int) art.Size {
 	if aspect <= 0 {
 		aspect = 2
 	}
-	rows := h - 4
+	rows := h - m.artworkMetadataRows()
 	cols := int(math.Round(float64(rows) * aspect))
 	for rows > 2 && cols > contentW {
 		rows--
@@ -71,4 +71,11 @@ func (m *Model) syncArtworkGraphics() tea.Cmd {
 		data = art.KittyDelete(previous) + data
 	}
 	return tea.Raw(data)
+}
+
+func (m *Model) artworkMetadataRows() int {
+	if m.inlineLyrics && m.width-4 >= 70 {
+		return 5
+	}
+	return 4
 }
