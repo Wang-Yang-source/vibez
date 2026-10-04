@@ -12,6 +12,7 @@ import (
 	"strconv"
 	"strings"
 	"time"
+	"unicode"
 
 	tea "charm.land/bubbletea/v2"
 	"charm.land/lipgloss/v2"
@@ -1138,6 +1139,11 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case RestartMsg:
 		return m, tea.Quit
 
+	case tea.PasteMsg:
+		if m.mode == modeSearch {
+			cmds = append(cmds, m.insertSearchText(msg.Content))
+		}
+
 	case tea.KeyPressMsg:
 		cmd := m.handleKey(msg)
 		cmds = append(cmds, cmd)
@@ -1327,15 +1333,31 @@ func (m *Model) handleSearchKey(k string, msg tea.KeyPressMsg) tea.Cmd {
 		m.searchCursor++
 		return m.scheduleSearch(m.searchQuery)
 	default:
-		if len(k) == 1 && k[0] >= 32 {
-			runes := []rune(m.searchQuery)
-			runes = append(runes[:m.searchCursor], append([]rune{rune(k[0])}, runes[m.searchCursor:]...)...)
-			m.searchQuery = string(runes)
-			m.searchCursor++
-			return m.scheduleSearch(m.searchQuery)
+		// Text carries committed IME input, including multiple Unicode characters.
+		if msg.Text != "" {
+			return m.insertSearchText(msg.Text)
 		}
 	}
 	return nil
+}
+
+// insertSearchText accepts Unicode text without interpreting pasted keys.
+func (m *Model) insertSearchText(text string) tea.Cmd {
+	text = strings.Map(func(r rune) rune {
+		if unicode.IsControl(r) {
+			return -1
+		}
+		return r
+	}, text)
+	inserted := []rune(text)
+	if len(inserted) == 0 {
+		return nil
+	}
+	runes := []rune(m.searchQuery)
+	runes = slices.Insert(runes, m.searchCursor, inserted...)
+	m.searchQuery = string(runes)
+	m.searchCursor += len(inserted)
+	return m.scheduleSearch(m.searchQuery)
 }
 
 // ── Command palette ───────────────────────────────────────────────────────
