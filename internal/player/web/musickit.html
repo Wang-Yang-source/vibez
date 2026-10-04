@@ -29,10 +29,10 @@
         developerToken: '{{.DeveloperToken}}',
         app: { name: 'vibez', build: '{{.Version}}' },
       };
-      // Do NOT pass storefrontId from config here. If the config still has the
-      // default "us" value for a non-US account, forcing it overrides MusicKit's
-      // auto-detection and causes CONTENT_EQUIVALENT for every non-US track.
-      // MusicKit derives the correct storefront from the user token automatically.
+      // The launcher resolves /me/storefront before creating the backend.
+      // A manually restored token does not refresh the SDK's default US region.
+      const accountStorefront = {{.StorefrontJSON}};
+      if (/^[a-z]{2}$/.test(accountStorefront)) configOpts.storefrontId = accountStorefront;
       const music = await MusicKit.configure(configOpts);
       const _metadataLanguage = {{.LanguageJSON}};
       function _localizedMusicAPI(path, params = {}) {

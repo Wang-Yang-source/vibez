@@ -77,3 +77,10 @@ func TestRenderHTMLMetadataLanguageIsSafelyEncoded(t *testing.T) {
 		t.Fatal("unsafe JavaScript string")
 	}
 }
+
+func TestVerifiedAccountStorefrontConfiguresMusicKit(t *testing.T) {
+	html, err := RenderHTML("dev", "user", "cn", "test", 256)
+	if err != nil || !strings.Contains(html, `const accountStorefront = "cn";`) || !strings.Contains(html, "configOpts.storefrontId = accountStorefront") {
+		t.Fatal("restored token leaves SDK using default US region")
+	}
+}

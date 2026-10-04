@@ -33,8 +33,10 @@ func RenderHTML(devToken, userToken, storefront, version string, audioBitrateKbp
 	if err != nil {
 		return "", err
 	}
+	storefrontJSON, _ := json.Marshal(storefront)
 	var buf strings.Builder
 	if err := tmpl.Execute(&buf, map[string]any{
+		"StorefrontJSON":   string(storefrontJSON),
 		"LanguageJSON":     string(languageJSON),
 		"DeveloperToken":   devToken,
 		"UserToken":        userToken,

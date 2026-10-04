@@ -4,9 +4,11 @@ import (
 	"bufio"
 	"context"
 	"fmt"
+	"github.com/simone-vibes/vibez/internal/provider/apple"
 	"os"
 	"path/filepath"
 	"strings"
+	"time"
 
 	tea "charm.land/bubbletea/v2"
 	"github.com/simone-vibes/vibez/internal/assets"
@@ -166,7 +168,7 @@ func runTUI(_ *cobra.Command, _ []string) error {
 		}
 	}
 	onStorefront := func(sf string) {
-		if sf != "" && sf != cfg.StoreFront {
+		if cfg.StoreFront == "" && len(sf) == 2 {
 			cfg.StoreFront = sf
 			if saveErr := cfg.Save(""); saveErr != nil && debug {
 				fmt.Fprintf(os.Stderr, "debug: saving storefront: %v\n", saveErr)
@@ -176,4 +178,15 @@ func runTUI(_ *cobra.Command, _ []string) error {
 
 	return runPlatform(cfg, iconPath, opts, onUserToken, onStorefront, audioBitrateKbps)
 
+}
+
+func resolveAccountStorefront(cfg *config.Config) error {
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	sf, err := apple.New(cfg).AccountStorefront(ctx)
+	if err != nil {
+		return fmt.Errorf("resolving Apple Music account region: %w", err)
+	}
+	cfg.StoreFront = sf
+	return cfg.Save("")
 }

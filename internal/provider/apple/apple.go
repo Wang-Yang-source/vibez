@@ -60,6 +60,11 @@ func (a *AppleProvider) storefront(ctx context.Context) (string, error) {
 	if a.sf != "" {
 		return a.sf, nil
 	}
+	return a.AccountStorefront(ctx)
+}
+
+// AccountStorefront resolves the token's account region, ignoring stale config.
+func (a *AppleProvider) AccountStorefront(ctx context.Context) (string, error) {
 	req, err := a.newRequest(ctx, http.MethodGet, "/me/storefront")
 	if err != nil {
 		return "", fmt.Errorf("storefront request: %w", err)
@@ -72,6 +77,9 @@ func (a *AppleProvider) storefront(ctx context.Context) (string, error) {
 		return "", fmt.Errorf("storefront: empty response from Apple")
 	}
 	a.sf = resp.Data[0].ID
+	if len(a.sf) != 2 || a.sf[0] < 'a' || a.sf[0] > 'z' || a.sf[1] < 'a' || a.sf[1] > 'z' {
+		return "", fmt.Errorf("invalid account storefront")
+	}
 	return a.sf, nil
 }
 
