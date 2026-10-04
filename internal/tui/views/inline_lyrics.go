@@ -41,6 +41,7 @@ func (l *LyricsModel) InlineLines(w, h int) []string {
 	type visualRow struct {
 		text   string
 		source int
+		offset int
 	}
 	var visual []visualRow
 	anchor := max(0, l.currentIdx)
@@ -58,12 +59,18 @@ func (l *LyricsModel) InlineLines(w, h int) []string {
 		if line.Speaker != "" {
 			text = line.Speaker + " · " + text
 		}
+		offset := 0
 		for _, part := range strings.Split(ansi.Wrap(text, blockW, ""), "\n") {
-			visual = append(visual, visualRow{part, i})
+			partStart := offset
+			if index := strings.Index(text[offset:], part); index >= 0 {
+				partStart += index
+			}
+			visual = append(visual, visualRow{part, i, partStart})
+			offset = partStart + len(part)
 		}
 		// Separate phrases, while keeping simultaneous singers together.
 		if i+1 == len(l.lines) || !l.synced || line.Start != l.lines[i+1].Start {
-			visual = append(visual, visualRow{"", -1})
+			visual = append(visual, visualRow{"", -1, 0})
 		}
 	}
 	target := anchorRow - h/2
@@ -108,7 +115,16 @@ func (l *LyricsModel) InlineLines(w, h int) []string {
 		} else if lyrics.IsChorus(line.Speaker) {
 			x = max(0, (w-lipgloss.Width(item.text))/2)
 		}
-		rows[row] = strings.Repeat(" ", x) + style.Render(item.text)
+		rendered := style.Render(item.text)
+		if active {
+			completed, _ := l.lineProgress(item.source)
+			if line.Speaker != "" {
+				completed += len(line.Speaker + " · ")
+			}
+			split := min(max(0, completed-item.offset), len(item.text))
+			rendered = style.Render(item.text[:split]) + lipgloss.NewStyle().Foreground(styles.ColorMuted).Bold(true).Render(item.text[split:])
+		}
+		rows[row] = strings.Repeat(" ", x) + rendered
 	}
 
 	return rows

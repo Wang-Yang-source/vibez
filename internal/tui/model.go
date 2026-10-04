@@ -693,6 +693,7 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 		// Always sync playback position so the current lyrics line stays highlighted.
 		if s.Track != nil {
+			m.lyricsP.m.SetDuration(s.Track.Duration)
 			m.lyricsP.m.SetPosition(s.Position)
 		}
 		// Discovery: in auto mode, fire as soon as the last track in the queue

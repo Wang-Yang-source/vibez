@@ -14,6 +14,8 @@ import (
 // Call SetLoading when a fetch starts, SetLyrics when it completes, and
 // SetPosition on every player-state update so the current line is highlighted.
 type LyricsModel struct {
+	position       time.Duration
+	duration       time.Duration
 	notFound       bool
 	Locale         locale.Locale
 	lines          []lyrics.Line
@@ -65,6 +67,7 @@ func (l *LyricsModel) SetLyrics(res *lyrics.Result, err error) {
 // SetPosition updates which line is highlighted based on the playback position.
 // No-op for plain (unsynced) lyrics.
 func (l *LyricsModel) SetPosition(pos time.Duration) {
+	l.position = pos
 	if !l.synced || len(l.lines) == 0 {
 		return
 	}
@@ -120,3 +123,19 @@ func (l *LyricsModel) View() string {
 }
 
 func (l *LyricsModel) HasError() bool { return l.errMsg != "" }
+
+func (l *LyricsModel) SetDuration(duration time.Duration) { l.duration = duration }
+func (l *LyricsModel) lineProgress(index int) (int, float64) {
+	line := l.lines[index]
+	end := l.duration
+	for _, next := range l.lines[index+1:] {
+		if next.Start > line.Start {
+			end = next.Start
+			break
+		}
+	}
+	if end <= line.Start {
+		end = line.Start + 4*time.Second
+	}
+	return lyrics.Progress(line, end, l.position)
+}
