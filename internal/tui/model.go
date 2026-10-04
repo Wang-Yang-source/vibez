@@ -3067,6 +3067,16 @@ func (m *Model) View() tea.View {
 		v.Cursor = tea.NewCursor(min(m.width-3, 5+lipgloss.Width(before)), m.nowPlayingHeight()+4)
 		v.Cursor.Shape = tea.CursorBar
 	}
+	if m.introStep == introDone && m.mode == modeNormal && m.activePanel < 0 && !m.debugView && m.width >= 12 && m.height >= 8 {
+		inner := m.width - 2
+		splitW := inner / 2
+		rightW := inner - splitW - 1
+		if c := m.vibe.InputCursor(rightW-2, m.panelHeight()); c != nil {
+			c.X += splitW + 3
+			c.Y += m.nowPlayingHeight() + 4
+			v.Cursor = c
+		}
+	}
 	return v
 }
 

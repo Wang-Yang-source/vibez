@@ -8,6 +8,7 @@ import (
 	"charm.land/bubbles/v2/textinput"
 	tea "charm.land/bubbletea/v2"
 	"charm.land/lipgloss/v2"
+	"github.com/charmbracelet/x/ansi"
 	"github.com/simone-vibes/vibez/internal/tui/styles"
 )
 
@@ -91,6 +92,7 @@ func NewVibe() *VibeModel {
 	ti.Placeholder = "late night coding, gym, rainy day…"
 	ti.CharLimit = 80
 	ti.Prompt = ""
+	ti.SetVirtualCursor(false)
 	return &VibeModel{input: ti}
 }
 
@@ -260,7 +262,7 @@ func (v *VibeModel) Lines(w, h, step int) []string {
 	bear := styles.BearStyle.Render(thinkFrames[(step/10)%len(thinkFrames)])
 
 	v.input.Placeholder = v.Locale.Text("late night coding, gym, rainy day…")
-	v.input.SetWidth(max(w-4, 10))
+	v.input.SetWidth(0)
 
 	clip := func(s string, maxLen int) string {
 		if maxLen <= 0 {
@@ -357,7 +359,7 @@ func (v *VibeModel) Lines(w, h, step int) []string {
 		lines = []string{
 			label, sep,
 			accent.Render(v.Locale.Text("describe your vibe:")),
-			"> " + v.input.View(),
+			"> " + v.inputLine(max(1, w-2)),
 			"",
 			bear + " " + muted.Render(v.Locale.Text("listening…")),
 			"",
@@ -411,4 +413,35 @@ func (v *VibeModel) Lines(w, h, step int) []string {
 		lines = append(lines, "")
 	}
 	return lines[:h]
+}
+
+// Use the existing ANSI viewport helpers for display-cell scrolling. Bubbles'
+// editing position counts runes, so compute its real cursor column from widths.
+func (v *VibeModel) inputLine(width int) string {
+	if v.input.Value() == "" {
+		return ansi.Truncate(styles.QueueItemMuted.Render(v.input.Placeholder), width, "")
+	}
+	_, offset := v.inputColumn(width)
+	return ansi.Truncate(ansi.TruncateLeft(v.input.View(), offset, ""), width, "")
+}
+func (v *VibeModel) inputColumn(width int) (int, int) {
+	value := []rune(v.input.Value())
+	prefix := lipgloss.Width(string(value[:min(v.input.Position(), len(value))]))
+	offset := max(0, prefix-max(0, width-1))
+	return prefix - offset, offset
+}
+
+// InputCursor is relative to the panel's content origin, including the prompt.
+func (v *VibeModel) InputCursor(w, h int) *tea.Cursor {
+	if !v.IsFocused() || h <= 3 || w <= 2 {
+		return nil
+	}
+	c := v.input.Cursor()
+	if c == nil {
+		return nil
+	}
+	column, _ := v.inputColumn(w - 2)
+	c.X = 2 + column
+	c.Y = 3
+	return c
 }
