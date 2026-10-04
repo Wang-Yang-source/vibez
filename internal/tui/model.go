@@ -1990,6 +1990,11 @@ func (m *Model) forwardToActivePanel(msg tea.KeyPressMsg) tea.Cmd {
 }
 
 func (m *Model) handleNormalKey(msg tea.KeyPressMsg, k string) tea.Cmd {
+	if k == "y" && m.playerState.Track != nil && m.lyricsP.m.HasError() {
+		m.lyricsP.m.SetLoading()
+		m.lastLyricsTrackID = views.PlaybackID(*m.playerState.Track)
+		return m.fetchLyricsCmd(m.playerState.Track)
+	}
 	if k == "y" && m.cfg.InlineLyrics {
 		m.inlineLyrics = !m.inlineLyrics
 		if m.inlineLyrics && m.playerState.Track != nil && m.lastLyricsTrackID == "" {

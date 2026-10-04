@@ -23,6 +23,9 @@ func (l *LyricsModel) InlineLines(w, h int) []string {
 			label = "Loading lyrics…"
 		} else if l.errMsg != "" {
 			label = "Lyrics source has no matching result"
+			if !l.notFound {
+				label = "Lyrics request failed; retry with y"
+			}
 		}
 		rows[h/2] = centerLyric(styles.QueueItemMuted.Render(l.Locale.Text(label)), w)
 		return rows
