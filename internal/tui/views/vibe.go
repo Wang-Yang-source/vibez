@@ -290,7 +290,7 @@ func (v *VibeModel) Lines(w, h, step int) []string {
 				prefix = accent.Render("▶ ")
 				nameStyle = primary
 			}
-			lines = append(lines, prefix+nameStyle.Render(opt.label))
+			lines = append(lines, prefix+nameStyle.Render(v.Locale.Text(opt.label)))
 		}
 		lines = append(lines,
 			"",
@@ -332,7 +332,7 @@ func (v *VibeModel) Lines(w, h, step int) []string {
 			muted.Render(clip(d.SeedTitle, w-4)),
 			"",
 			muted.Render(v.Locale.Text("Metric")) + "  " + bar + "  " + labelStyle.Render(pct),
-			muted.Render("       ") + labelStyle.Render(simLabel),
+			muted.Render("       ") + labelStyle.Render(v.Locale.Text(simLabel)),
 			modeStr,
 			"",
 			bearStatus,

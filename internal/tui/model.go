@@ -431,7 +431,7 @@ func New(cfg *config.Config, prov provider.Provider, plyr player.Player, opts Op
 	m.aboutP = &aboutPanel{m: views.NewAbout()}
 	m.panels = []ContentView{m.library, m.queue, m.lyricsP, m.feedP, m.eqP, m.aboutP}
 	m.inlineLyrics = cfg.InlineLyrics
-	m.library.m.Locale = m.ui
+	m.library.m.SetLocale(m.ui)
 	m.queue.m.Locale = m.ui
 	m.lyricsP.m.Locale = m.ui
 	m.feedP.m.Locale = m.ui

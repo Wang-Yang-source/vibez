@@ -17,6 +17,26 @@ func (l Locale) Text(s string) string {
 }
 
 var chinese = map[string]string{
+	"Songs":     "歌曲",
+	"Equalizer": "均衡器",
+	"←/→ band  ↑/↓ gain  0 reset band  r reset all  e close": "←/→ 频段  ↑/↓ 增益  0 重置频段  r 全部重置  e 关闭",
+	"Loading songs…":     "正在加载歌曲…",
+	"Loading albums…":    "正在加载专辑…",
+	"Loading artists…":   "正在加载歌手…",
+	"Loading playlists…": "正在加载歌单…",
+	"Loading…":           "正在加载…",
+	"No songs found":     "未找到歌曲",
+	"No albums found":    "未找到专辑",
+	"No artists found":   "未找到歌手",
+	"No playlists found": "未找到歌单",
+	"No items found":     "未找到内容",
+	"enter to browse":    "回车浏览",
+	"same artist":        "同一歌手",
+	"similar artists":    "相似歌手",
+	"same genre":         "同一曲风",
+	"exploring":          "更多变化",
+	"pure discovery":     "全新探索",
+
 	"Terminal too small": "终端窗口太小",
 	"Queue":              "播放队列",
 	"  %d tracks":        "  %d 首",

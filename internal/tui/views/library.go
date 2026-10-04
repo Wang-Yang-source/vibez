@@ -494,7 +494,7 @@ func queueTracksCmd(label string, tracks []provider.Track, playNext bool) tea.Cm
 }
 
 func (m *LibraryModel) showSections() {
-	items := []list.Item{sectionItem{sectionSongs}, sectionItem{sectionAlbums}, sectionItem{sectionArtists}, sectionItem{sectionPlaylists}}
+	items := []list.Item{sectionItem{sectionSongs, m.Locale}, sectionItem{sectionAlbums, m.Locale}, sectionItem{sectionArtists, m.Locale}, sectionItem{sectionPlaylists, m.Locale}}
 	m.list.SetItems(items)
 	m.list.Select(0)
 }
@@ -555,13 +555,13 @@ func (m *LibraryModel) View() string {
 	}
 	header := m.renderHeader()
 	if m.loading {
-		return header + "\n\n  " + m.spinner.View() + " " + m.loadingText()
+		return header + "\n\n  " + m.spinner.View() + " " + m.Locale.Text(m.loadingText())
 	}
 	if m.loadErr != nil && m.pane != paneSections {
 		return header + "\n\n" + centerLine(styles.QueueItemMuted.Render("Could not load: "+m.loadErr.Error()), m.width)
 	}
 	if len(m.list.Items()) == 0 {
-		return header + "\n\n" + centerLine(styles.QueueItemMuted.Render(m.emptyText()), m.width)
+		return header + "\n\n" + centerLine(styles.QueueItemMuted.Render(m.Locale.Text(m.emptyText())), m.width)
 	}
 	return header + "\n" + m.list.View()
 }
@@ -591,7 +591,7 @@ func (m *LibraryModel) renderHeader() string {
 	if m.pane == paneItems {
 		title = sectionTitle(m.selectedSection)
 	}
-	return styles.TabActive.Render(title) + "\n" + lipgloss.NewStyle().Foreground(styles.ColorMuted).Render(strings.Repeat("─", max(1, m.width)))
+	return styles.TabActive.Render(m.Locale.Text(title)) + "\n" + lipgloss.NewStyle().Foreground(styles.ColorMuted).Render(strings.Repeat("─", max(1, m.width)))
 }
 
 func (m *LibraryModel) loadingText() string {
@@ -687,10 +687,13 @@ func buildLibraryArtists(tracks []provider.Track) []trackGroup {
 	return groups
 }
 
-type sectionItem struct{ section librarySection }
+type sectionItem struct {
+	section librarySection
+	Locale  locale.Locale
+}
 
-func (s sectionItem) Title() string       { return sectionTitle(s.section) }
-func (s sectionItem) Description() string { return "enter to browse" }
+func (s sectionItem) Title() string       { return s.Locale.Text(sectionTitle(s.section)) }
+func (s sectionItem) Description() string { return s.Locale.Text("enter to browse") }
 func (s sectionItem) FilterValue() string { return s.Title() }
 
 type albumItem struct{ group trackGroup }
@@ -721,3 +724,10 @@ type trackListItem struct{ t provider.Track }
 func (i trackListItem) Title() string       { return i.t.Title }
 func (i trackListItem) Description() string { return fmt.Sprintf("%s — %s", i.t.Artist, i.t.Album) }
 func (i trackListItem) FilterValue() string { return i.t.Title + " " + i.t.Artist }
+
+func (m *LibraryModel) SetLocale(value locale.Locale) {
+	m.Locale = value
+	if m.pane == paneSections {
+		m.showSections()
+	}
+}
