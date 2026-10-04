@@ -489,3 +489,11 @@ The search cursor follows terminal cell widths so Chinese IME candidates stay
 next to the input. Long queries scroll horizontally to keep the cursor visible.
 Press `Esc` to close search. While playing, `y` opens the lyrics panel; available
 lyrics are fetched from LRCLIB and synchronized lyrics follow playback.
+
+### Apple Music metadata language
+
+Set `"apple_language": "zh-Hans-CN"` in your existing config to prefer simplified
+Chinese titles, artists, and albums. Use `zh-Hant-TW` for traditional Chinese.
+The account storefront and playback IDs stay unchanged. Catalog and MusicKit
+requests use Apple's `l` query parameter; availability of translated metadata
+depends on the storefront and the publisher. Leave it empty for Apple's default.
