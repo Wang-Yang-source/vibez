@@ -60,3 +60,34 @@ func TestLyricCanvasUsesTerminalBackgroundOrTransparency(t *testing.T) {
 		t.Fatal("unknown terminal background must remain transparent")
 	}
 }
+
+func TestLyricCanvasUsesCompactPhraseSpacing(t *testing.T) {
+	r, _ := NewLyricRenderer(goregular.TTF, 0, 32)
+	l := NewLyrics()
+	l.SetLyrics(&lyrics.Result{Synced: true, Lines: []lyrics.Line{{Start: 0, Text: "A short phrase"}, {Start: time.Second, Text: "The next phrase"}}}, nil)
+	r.RenderCanvas(l, 800, 400)
+	height := r.face.Metrics().Height.Ceil()
+	gap := r.lineY[1] - r.lineY[0]
+	if gap > height*3/2 || gap < height {
+		t.Fatalf("paragraph spacing is not compact/readable: %d for font height %d", gap, height)
+	}
+	if err := r.SetPixelScale(2); err != nil {
+		t.Fatal(err)
+	}
+	r.RenderCanvas(l, 1600, 800)
+	height = r.face.Metrics().Height.Ceil()
+	gap = r.lineY[1] - r.lineY[0]
+	if gap > height*3/2 || gap < height {
+		t.Fatal("spacing changes proportion at native pixel density")
+	}
+}
+
+func TestLyricCanvasDoesNotReserveRowsForSingerMarkers(t *testing.T) {
+	r, _ := NewLyricRenderer(goregular.TTF, 0, 32)
+	l := NewLyrics()
+	l.SetLyrics(&lyrics.Result{Synced: true, Lines: []lyrics.Line{{Start: 0, Speaker: "A"}, {Start: 0, Speaker: "A", Text: "First phrase"}, {Start: time.Second, Speaker: "B"}, {Start: time.Second, Speaker: "B", Text: "Second phrase"}}}, nil)
+	r.RenderCanvas(l, 800, 400)
+	if len(r.phrases) != 2 || r.lineY[0] != r.lineY[1] || r.lineY[2] != r.lineY[3] {
+		t.Fatal("speaker metadata introduced extra lyric spacing")
+	}
+}

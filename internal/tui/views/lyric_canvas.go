@@ -4,8 +4,10 @@ import (
 	"image"
 	"image/color"
 	"image/draw"
+	"math"
 	"os"
 	"strconv"
+	"strings"
 
 	"github.com/rivo/uniseg"
 	"github.com/simone-vibes/vibez/internal/lyrics"
@@ -74,8 +76,9 @@ func (r *LyricRenderer) RenderCanvasColors(l *LyricsModel, width, height int, fg
 	}
 	face := r.face
 	fontH := face.Metrics().Height.Ceil()
-	lineH := fontH + max(8, fontH/3)
 	scale := r.pixelScale
+	em := r.baseSize * scale
+	lineH := int(math.Ceil(em * 1.18))
 	blockW := min(max(1, width-int(48*scale)), int(780*scale))
 	inset := (width - blockW) / 2
 	anchor := max(0, l.currentIdx)
@@ -99,6 +102,9 @@ func (r *LyricRenderer) RenderCanvasColors(l *LyricsModel, width, height int, fg
 				}
 			}
 			r.lineY[i] = cursor
+			if line.Speaker != "" && strings.TrimSpace(line.Text) == "" {
+				continue
+			}
 			text := l.speakerPrefix(i) + line.Text
 			offset, start := 0, 0
 			g := uniseg.NewGraphemes(text)
@@ -114,7 +120,7 @@ func (r *LyricRenderer) RenderCanvasColors(l *LyricsModel, width, height int, fg
 			phrases = append(phrases, canvasPhrase{text: text[start:], source: i, offset: offset, y: cursor})
 			cursor += lineH
 			if i+1 == len(l.lines) || !l.synced || line.Start != l.lines[i+1].Start {
-				cursor += lineH / 2
+				cursor += max(3, int(math.Ceil(em*.22)))
 			}
 		}
 		for i := range phrases {
