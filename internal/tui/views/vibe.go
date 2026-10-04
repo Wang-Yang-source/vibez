@@ -352,7 +352,6 @@ func (v *VibeModel) Lines(w, h, step int) []string {
 			"",
 			bear + " " + muted.Render(v.Locale.Text("press v to start")),
 			"",
-			accent.Render("d") + muted.Render(v.Locale.Text(" set metric  ")) + accent.Render(":discover") + muted.Render(v.Locale.Text(" start")),
 		}
 
 	case vibeInputting:

@@ -323,3 +323,11 @@ func TestVibe_SetResult_SingleTrackSingular(t *testing.T) {
 		t.Errorf("Lines should contain '1 track' (singular) for added=1, got %v", lines)
 	}
 }
+
+func TestIdleVibeDoesNotRequireManualSimilarity(t *testing.T) {
+	v := NewVibe()
+	text := strings.Join(v.Lines(70, 12, 0), "\n")
+	if strings.Contains(text, ":discover") || strings.Contains(text, "set metric") {
+		t.Fatal("idle recommendation still prompts for manual similarity")
+	}
+}
