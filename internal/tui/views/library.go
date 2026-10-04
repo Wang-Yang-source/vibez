@@ -4,6 +4,7 @@ import (
 	"cmp"
 	"context"
 	"fmt"
+	"github.com/simone-vibes/vibez/internal/tui/locale"
 	"slices"
 	"strings"
 	"time"
@@ -84,6 +85,7 @@ type trackGroup struct {
 }
 
 type LibraryModel struct {
+	Locale   locale.Locale
 	provider provider.Provider
 	loading  bool
 	loadErr  error
@@ -567,9 +569,9 @@ func (m *LibraryModel) View() string {
 func (m *LibraryModel) renderDrillView() string {
 	name := styles.SidebarActive.Render(m.drillTitle)
 	if m.drillTitle == "" {
-		name = styles.SidebarActive.Render("Tracks")
+		name = styles.SidebarActive.Render(m.Locale.Text("Tracks"))
 	}
-	hint := styles.QueueItemMuted.Render("  b/esc back · enter play · tab queue · shift+tab next")
+	hint := styles.QueueItemMuted.Render(m.Locale.Text("  b/esc back · enter play · tab queue · shift+tab next"))
 	header := name + hint + "\n" + lipgloss.NewStyle().Foreground(styles.ColorMuted).Render(strings.Repeat("─", m.width))
 	if m.drillLoading {
 		return header + "\n\n  " + m.spinner.View() + " Loading tracks…"
@@ -578,7 +580,7 @@ func (m *LibraryModel) renderDrillView() string {
 		return header + "\n\n" + centerLine(styles.QueueItemMuted.Render("Could not load tracks: "+m.drillErr.Error()), m.width)
 	}
 	if len(m.drillTracks) == 0 {
-		return header + "\n\n" + centerLine(styles.QueueItemMuted.Render("No tracks found"), m.width)
+		return header + "\n\n" + centerLine(styles.QueueItemMuted.Render(m.Locale.Text("No tracks found")), m.width)
 	}
 	m.drillList.SetSize(m.width, max(0, m.height-3))
 	return header + "\n" + m.drillList.View()

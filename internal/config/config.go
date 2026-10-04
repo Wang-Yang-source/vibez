@@ -10,6 +10,7 @@ import (
 )
 
 type Config struct {
+	UILanguage string `json:"ui_language,omitempty"`
 	// path remembers where this config was loaded from. It is deliberately not
 	// serialized; it only ensures that Save("") persists back to the selected
 	// --config file instead of silently falling back to the default profile.
