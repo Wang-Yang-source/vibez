@@ -17,13 +17,13 @@ func (l *LyricsModel) InlineLines(w, h int) []string {
 		return rows
 	}
 	if l.loading || l.errMsg != "" || len(l.lines) == 0 {
-		label := "等待播放"
+		label := "Waiting for playback"
 		if l.loading {
-			label = "正在加载歌词…"
+			label = "Loading lyrics…"
 		} else if l.errMsg != "" {
-			label = "暂无可用歌词"
+			label = "Lyrics source has no matching result"
 		}
-		rows[h/2] = centerLyric(styles.QueueItemMuted.Render(label), w)
+		rows[h/2] = centerLyric(styles.QueueItemMuted.Render(l.Locale.Text(label)), w)
 		return rows
 	}
 	l.SetSize(w, h)

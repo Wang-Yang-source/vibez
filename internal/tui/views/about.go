@@ -2,6 +2,7 @@ package views
 
 import (
 	"fmt"
+	"github.com/simone-vibes/vibez/internal/tui/locale"
 	"strings"
 
 	tea "charm.land/bubbletea/v2"
@@ -12,6 +13,7 @@ import (
 
 // AboutModel renders application and author information.
 type AboutModel struct {
+	Locale locale.Locale
 	width  int
 	height int
 	status string
@@ -38,17 +40,17 @@ func (a *AboutModel) View() string {
 	secondary := lipgloss.NewStyle().Foreground(styles.ColorSecondary)
 
 	var sb strings.Builder
-	sb.WriteString(header.Render("About") + "\n")
+	sb.WriteString(header.Render(a.Locale.Text("About")) + "\n")
 	sb.WriteString(muted.Render(strings.Repeat("─", 5)) + "\n\n")
 
 	contentLines := []string{
 		primary.Render("vibez ♪"),
-		muted.Render(fmt.Sprintf("version %s", version.Version)),
+		muted.Render(fmt.Sprintf(a.Locale.Text("version %s"), version.Version)),
 		"",
-		normal.Render("Apple Music in your terminal."),
-		normal.Render("Vibe-driven. Keyboard-first."),
+		normal.Render(a.Locale.Text("Apple Music in your terminal.")),
+		normal.Render(a.Locale.Text("Vibe-driven. Keyboard-first.")),
 		"",
-		secondary.Render("made with ❤️ by simonepelosi"),
+		secondary.Render(a.Locale.Text("made with ❤️ by simonepelosi")),
 		"",
 	}
 

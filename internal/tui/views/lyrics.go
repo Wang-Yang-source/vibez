@@ -1,6 +1,7 @@
 package views
 
 import (
+	"github.com/simone-vibes/vibez/internal/tui/locale"
 	"strings"
 	"time"
 
@@ -14,6 +15,7 @@ import (
 // Call SetLoading when a fetch starts, SetLyrics when it completes, and
 // SetPosition on every player-state update so the current line is highlighted.
 type LyricsModel struct {
+	Locale     locale.Locale
 	lines      []lyrics.Line
 	synced     bool
 	loading    bool
@@ -112,25 +114,25 @@ func (l *LyricsModel) View() string {
 	header := styles.TabActive
 
 	if l.loading {
-		return header.Render("Lyrics") + "\n" +
+		return header.Render(l.Locale.Text("Lyrics")) + "\n" +
 			strings.Repeat("─", 5) + "\n\n" +
-			muted.Render("fetching lyrics…")
+			muted.Render(l.Locale.Text("fetching lyrics…"))
 	}
 
 	if l.errMsg != "" {
-		return header.Render("Lyrics") + "\n" +
+		return header.Render(l.Locale.Text("Lyrics")) + "\n" +
 			strings.Repeat("─", 5) + "\n\n" +
-			muted.Render("You cannot sing this song :(")
+			muted.Render(l.Locale.Text("You cannot sing this song :("))
 	}
 
 	if len(l.lines) == 0 {
-		return header.Render("Lyrics") + "\n" +
+		return header.Render(l.Locale.Text("Lyrics")) + "\n" +
 			strings.Repeat("─", 5) + "\n\n" +
-			muted.Render("no lyrics found")
+			muted.Render(l.Locale.Text("no lyrics found"))
 	}
 
 	var sb strings.Builder
-	sb.WriteString(header.Render("Lyrics") + "\n")
+	sb.WriteString(header.Render(l.Locale.Text("Lyrics")) + "\n")
 	sb.WriteString(muted.Render(strings.Repeat("─", 5)) + "\n")
 
 	end := min(l.scroll+max(l.height-2, 1), len(l.lines))

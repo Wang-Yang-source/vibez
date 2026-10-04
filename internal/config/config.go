@@ -20,6 +20,7 @@ type Config struct {
 	AppleKeyID          string `json:"apple_key_id"`
 	AppleTeamID         string `json:"apple_team_id"`
 	StoreFront          string `json:"storefront"`
+	UILanguage          string `json:"ui_language,omitempty"`
 	AppleLanguage       string `json:"apple_language,omitempty"`
 	AuthPort            int    `json:"auth_port"`
 	Provider            string `json:"provider"`

@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/simone-vibes/vibez/internal/tui/locale"
 	"image"
 	"math/rand"
 	"net/http"
@@ -282,6 +283,7 @@ const radioMaxRetries = 5 // give up re-arming after this many consecutive failu
 // ── Model ─────────────────────────────────────────────────────────────────
 
 type Model struct {
+	ui       locale.Locale
 	cfg      *config.Config
 	provider provider.Provider
 	player   player.Player
@@ -390,6 +392,7 @@ type Model struct {
 
 func New(cfg *config.Config, prov provider.Provider, plyr player.Player, opts Options) *Model {
 	m := &Model{
+		ui:           locale.Locale{Language: cfg.UILanguage},
 		cfg:          cfg,
 		provider:     prov,
 		player:       plyr,
@@ -428,6 +431,14 @@ func New(cfg *config.Config, prov provider.Provider, plyr player.Player, opts Op
 	m.aboutP = &aboutPanel{m: views.NewAbout()}
 	m.panels = []ContentView{m.library, m.queue, m.lyricsP, m.feedP, m.eqP, m.aboutP}
 	m.inlineLyrics = cfg.InlineLyrics
+	m.library.m.Locale = m.ui
+	m.queue.m.Locale = m.ui
+	m.lyricsP.m.Locale = m.ui
+	m.feedP.m.Locale = m.ui
+	m.eqP.m.Locale = m.ui
+	m.vibe.Locale = m.ui
+	m.search.Locale = m.ui
+	m.aboutP.m.Locale = m.ui
 	if opts.Backend != "" {
 		m.appendLog("[engine] backend: " + opts.Backend)
 	}
@@ -3349,8 +3360,8 @@ func (m *Model) nowPlayingTextLines(contentW, h int) []string {
 	if t == nil {
 		lines := make([]string, h)
 		mid := h / 2
-		lines[mid] = centerStr(muted.Render("silence is not a vibe"), contentW)
-		lines[h-2] = centerStr(muted.Render("made with ❤️ by simonepelosi · press ? for about"), contentW)
+		lines[mid] = centerStr(muted.Render(m.ui.Text("silence is not a vibe")), contentW)
+		lines[h-2] = centerStr(muted.Render(m.ui.Text("made with ❤️ by simonepelosi · press ? for about")), contentW)
 		if m.errMsg != "" {
 			// statusLine renders this identically and truncates to the width,
 			// which a message long enough to explain itself needs.
@@ -3430,7 +3441,7 @@ func (m *Model) nowPlayingTextLines(contentW, h int) []string {
 
 	lines := []string{
 		"",
-		centerStr(styles.NowPlayingLabel.Render("Now Playing"), contentW),
+		centerStr(styles.NowPlayingLabel.Render(m.ui.Text("Now Playing")), contentW),
 		centerStr(muted.Render(strings.Repeat("─", 11)), contentW),
 		trackLine,
 		albumLine,
@@ -3481,10 +3492,10 @@ func (m *Model) queuePanelLines(w, h int) []string {
 	// Header: "Queue  12 tracks"
 	var headerLabel string
 	if total > 0 {
-		countStr := styles.QueueItemMuted.Render(fmt.Sprintf("  %d tracks", total))
-		headerLabel = styles.Header.Render("Queue") + countStr
+		countStr := styles.QueueItemMuted.Render(fmt.Sprintf(m.ui.Text("  %d tracks"), total))
+		headerLabel = styles.Header.Render(m.ui.Text("Queue")) + countStr
 	} else {
-		headerLabel = styles.Header.Render("Queue")
+		headerLabel = styles.Header.Render(m.ui.Text("Queue"))
 	}
 	sep := styles.QueueItemMuted.Render(strings.Repeat("─", 5))
 
@@ -3507,7 +3518,7 @@ func (m *Model) queuePanelLines(w, h int) []string {
 		}
 	}
 	if len(trackLines) == 0 {
-		trackLines = []string{styles.QueueItemMuted.Render("  Queue is empty")}
+		trackLines = []string{styles.QueueItemMuted.Render(m.ui.Text("  Queue is empty"))}
 	}
 
 	// header + sep occupy 2 lines; remaining rows hold track entries.
@@ -3564,7 +3575,7 @@ func (m *Model) searchLines(contentW, h int) []string {
 	m.search.SetSize(contentW, listH)
 	listView := m.search.View()
 	if listView == "" && !m.search.Loading() && m.searchQuery != "" {
-		listView = "  " + muted.Render("no results")
+		listView = "  " + muted.Render(m.ui.Text("no results"))
 	}
 
 	listLines := toLines(listView, listH)
@@ -3624,8 +3635,8 @@ func (m *Model) statusNavLines(w int) []string {
 		case m.vibe.IsFocused():
 			parts = []string{
 				styles.ModeNormal.Render("VIBE"),
-				accent.Render("Enter") + muted.Render(" search"),
-				accent.Render("esc") + muted.Render(" cancel"),
+				accent.Render("Enter") + muted.Render(m.ui.Text(" search")),
+				accent.Render("esc") + muted.Render(m.ui.Text(" cancel")),
 			}
 		case m.activePanel >= 0 && m.panels[m.activePanel] == m.queue:
 			parts = []string{
@@ -3659,7 +3670,7 @@ func (m *Model) statusNavLines(w int) []string {
 				accent.Render("Enter") + muted.Render(" play"),
 				accent.Render("Tab") + muted.Render(" queue"),
 				accent.Render("Shift+Tab") + muted.Render(" next"),
-				accent.Render("j/k") + muted.Render(" navigate"),
+				accent.Render("j/k") + muted.Render(m.ui.Text(" navigate")),
 				accent.Render("r") + muted.Render(" refresh"),
 				accent.Render("esc") + muted.Render(" close"),
 			}
@@ -3681,7 +3692,7 @@ func (m *Model) statusNavLines(w int) []string {
 			parts = []string{
 				styles.ModeNormal.Render("NORMAL"),
 				accent.Render(":") + muted.Render(" command"),
-				accent.Render("/") + muted.Render(" search"),
+				accent.Render("/") + muted.Render(m.ui.Text(" search")),
 				accent.Render("l") + muted.Render(" library"),
 				accent.Render("q") + muted.Render(" queue"),
 				accent.Render("y") + muted.Render(" lyrics"),
@@ -3732,7 +3743,7 @@ func (m *Model) statusPlayLines(w int) []string {
 func (m *Model) commandLines(w int, h int) []string {
 	muted := styles.QueueItemMuted
 	accent := styles.KeyName
-	header := accent.Render("Commands")
+	header := accent.Render(m.ui.Text("Commands"))
 	sep := muted.Render(strings.Repeat("─", 8))
 
 	suggs := m.commandSuggestions()
@@ -3747,11 +3758,11 @@ func (m *Model) commandLines(w int, h int) []string {
 			descStyle = styles.QueueItem
 		}
 		usage := nameStyle.Render(fmt.Sprintf("%-20s", c.usage))
-		desc := descStyle.Render(c.description)
+		desc := descStyle.Render(m.ui.Text(c.description))
 		rows = append(rows, cursor+usage+" "+desc)
 	}
 	if len(rows) == 0 {
-		rows = []string{"  " + muted.Render("no matching commands")}
+		rows = []string{"  " + muted.Render(m.ui.Text("no matching commands"))}
 	}
 
 	input := accent.Render(":") + "  " + styles.QueueItem.Render(m.visibleCommandText(w)) + " "
@@ -4061,13 +4072,13 @@ func (m *Model) renderPlaylistPickerModal() string {
 
 	switch {
 	case m.playlistPickerLoading:
-		lines = append(lines, styles.QueueItemMuted.Render("  Loading playlists…"))
+		lines = append(lines, styles.QueueItemMuted.Render(m.ui.Text("  Loading playlists…")))
 	case len(m.playlistPickerItems) == 0:
-		lines = append(lines, styles.QueueItemMuted.Render("  No playlists found"))
+		lines = append(lines, styles.QueueItemMuted.Render(m.ui.Text("  No playlists found")))
 	default:
 		start, end := m.pickerWindow()
 		if start > 0 {
-			lines = append(lines, styles.QueueItemMuted.Render(fmt.Sprintf("  ↑ %d more", start)))
+			lines = append(lines, styles.QueueItemMuted.Render(fmt.Sprintf(m.ui.Text("  ↑ %d more"), start)))
 		}
 		for i := start; i < end; i++ {
 			name := truncateStr(m.playlistPickerItems[i].Name, innerW-3)
@@ -4079,12 +4090,12 @@ func (m *Model) renderPlaylistPickerModal() string {
 		}
 		remaining := len(m.playlistPickerItems) - end
 		if remaining > 0 {
-			lines = append(lines, styles.QueueItemMuted.Render(fmt.Sprintf("  ↓ %d more", remaining)))
+			lines = append(lines, styles.QueueItemMuted.Render(fmt.Sprintf(m.ui.Text("  ↓ %d more"), remaining)))
 		}
 	}
 
 	lines = append(lines, sep)
-	lines = append(lines, styles.QueueItemMuted.Render("  ↑↓/jk navigate · ⏎ add · esc cancel"))
+	lines = append(lines, styles.QueueItemMuted.Render(m.ui.Text("  ↑↓/jk navigate · ⏎ add · esc cancel")))
 
 	return lipgloss.NewStyle().
 		Border(lipgloss.RoundedBorder()).
