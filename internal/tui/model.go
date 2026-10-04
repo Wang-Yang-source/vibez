@@ -295,6 +295,7 @@ type Model struct {
 	// so they only re-render on a track change or a resize.
 	artMode             bool
 	artGraphics         artworkGraphics
+	artworkViewport     art.Size
 	artwork             artworkCache
 	artworkGen          int
 	artHTTP             *http.Client
@@ -302,6 +303,7 @@ type Model struct {
 	baseTheme           styles.Theme
 	musicTheme          string
 	coverThemeURL       string
+	inlineLyrics        bool
 	supportsArtColor    func() bool
 	supportsArtGraphics func() bool
 	artCellAsp          float64          // terminal cell height/width ratio, for square art
@@ -424,6 +426,7 @@ func New(cfg *config.Config, prov provider.Provider, plyr player.Player, opts Op
 	m.favorites = make(map[string]bool)
 	m.aboutP = &aboutPanel{m: views.NewAbout()}
 	m.panels = []ContentView{m.library, m.queue, m.lyricsP, m.feedP, m.eqP, m.aboutP}
+	m.inlineLyrics = cfg.InlineLyrics
 	if opts.Backend != "" {
 		m.appendLog("[engine] backend: " + opts.Backend)
 	}
@@ -642,7 +645,7 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			// visible, otherwise mark stale so the fetch is deferred until
 			// the user opens the panel (lazy loading).
 			if id := views.PlaybackID(*s.Track); id != m.lastLyricsTrackID {
-				lyricsOpen := m.activePanel >= 0 && m.panels[m.activePanel] == m.lyricsP
+				lyricsOpen := m.inlineLyrics || (m.activePanel >= 0 && m.panels[m.activePanel] == m.lyricsP)
 				if lyricsOpen {
 					m.lastLyricsTrackID = id
 					m.lyricsP.m.SetLoading()
@@ -732,6 +735,7 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		// Discard stale results if the user skipped to a different track.
 		if msg.trackID == m.lastLyricsTrackID {
 			m.lyricsP.m.SetLyrics(msg.result, msg.err)
+			m.lyricsP.m.SetPosition(m.playerState.Position)
 			if msg.err != nil {
 				m.appendLog(fmt.Sprintf("[lyrics] not found: %v", msg.err))
 			} else {
@@ -1966,6 +1970,15 @@ func (m *Model) forwardToActivePanel(msg tea.KeyPressMsg) tea.Cmd {
 }
 
 func (m *Model) handleNormalKey(msg tea.KeyPressMsg, k string) tea.Cmd {
+	if k == "y" && m.cfg.InlineLyrics {
+		m.inlineLyrics = !m.inlineLyrics
+		if m.inlineLyrics && m.playerState.Track != nil && m.lastLyricsTrackID == "" {
+			m.lastLyricsTrackID = views.PlaybackID(*m.playerState.Track)
+			m.lyricsP.m.SetLoading()
+			return m.fetchLyricsCmd(m.playerState.Track)
+		}
+		return nil
+	}
 	// When debug log is open, j/k/G scroll it; esc back/closes it.
 	if m.debugView {
 		switch k {
@@ -3224,6 +3237,9 @@ func (m *Model) nowPlayingHeight() int {
 
 // nowPlayingLines returns exactly h lines for the Now Playing section.
 func (m *Model) nowPlayingLines(contentW, h int) []string {
+	if m.inlineLyrics {
+		return m.coverAndLyricsLines(contentW, h)
+	}
 	if m.artModeActive() && h >= 8 {
 		return m.nowPlayingArtLines(contentW, h)
 	}
@@ -3237,6 +3253,7 @@ func (m *Model) nowPlayingLines(contentW, h int) []string {
 // centred, sized square via the measured cell aspect ratio. While the cover
 // is still downloading its rows stay blank and it pops in when loaded.
 func (m *Model) nowPlayingArtLines(contentW, h int) []string {
+	m.artworkViewport = art.Size{Width: contentW, Height: h}
 	t := m.playerState.Track
 	if t == nil {
 		return m.nowPlayingTextLines(contentW, h)

@@ -3,11 +3,14 @@
 package lyrics
 
 import (
+	"cmp"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"net/url"
+	"slices"
 	"strconv"
 	"strings"
 	"time"
@@ -16,8 +19,9 @@ import (
 // Line is a single lyric line with an optional start timestamp.
 // For plain (unsynced) lyrics, Start is always 0.
 type Line struct {
-	Start time.Duration
-	Text  string
+	Speaker string
+	Start   time.Duration
+	Text    string
 }
 
 // Result holds the parsed lyrics returned by the client.
@@ -29,7 +33,8 @@ type Result struct {
 
 // Client is a thin HTTP wrapper around the LRCLIB API.
 type Client struct {
-	http *http.Client
+	http    *http.Client
+	baseURL string
 }
 
 // NewClient returns a Client ready for use.
@@ -40,8 +45,21 @@ func NewClient() *Client {
 // Fetch retrieves lyrics for a track. It prefers synced (LRC) lyrics and
 // falls back to plain lyrics when timing data is unavailable.
 // duration is used as a search hint; pass 0 if unknown.
+var errNotFound = errors.New("lyrics not found")
+
 func (c *Client) Fetch(ctx context.Context, artist, title, album string, duration time.Duration) (*Result, error) {
-	u, _ := url.Parse("https://lrclib.net/api/get")
+	result, err := c.fetch(ctx, artist, title, album, duration)
+	if errors.Is(err, errNotFound) && (album != "" || duration > 0) {
+		return c.fetch(ctx, artist, title, "", 0)
+	}
+	return result, err
+}
+func (c *Client) fetch(ctx context.Context, artist, title, album string, duration time.Duration) (*Result, error) {
+	base := c.baseURL
+	if base == "" {
+		base = "https://lrclib.net"
+	}
+	u, _ := url.Parse(base + "/api/get")
 	q := u.Query()
 	q.Set("artist_name", artist)
 	q.Set("track_name", title)
@@ -66,7 +84,7 @@ func (c *Client) Fetch(ctx context.Context, artist, title, album string, duratio
 	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode == http.StatusNotFound {
-		return nil, fmt.Errorf("lyrics not found")
+		return nil, errNotFound
 	}
 	if resp.StatusCode != http.StatusOK {
 		return nil, fmt.Errorf("lrclib: status %d", resp.StatusCode)
@@ -94,8 +112,13 @@ func (c *Client) Fetch(ctx context.Context, artist, title, album string, duratio
 
 	if data.PlainLyrics != "" {
 		var lines []Line
+		speaker := ""
 		for l := range strings.SplitSeq(data.PlainLyrics, "\n") {
-			lines = append(lines, Line{Text: strings.TrimSpace(l)})
+			label, text := splitSpeaker(strings.TrimSpace(l))
+			if label != "" {
+				speaker = label
+			}
+			lines = append(lines, Line{Text: text, Speaker: speaker})
 		}
 		return &Result{Lines: lines, Plain: data.PlainLyrics}, nil
 	}
@@ -106,6 +129,7 @@ func (c *Client) Fetch(ctx context.Context, artist, title, album string, duratio
 // parseLRC parses lines in LRC format: [mm:ss.xx] text
 func parseLRC(lrc string) ([]Line, error) {
 	var lines []Line
+	speaker := ""
 	for raw := range strings.SplitSeq(lrc, "\n") {
 		raw = strings.TrimSpace(raw)
 		if raw == "" || !strings.HasPrefix(raw, "[") {
@@ -119,8 +143,13 @@ func parseLRC(lrc string) ([]Line, error) {
 		if err != nil {
 			continue
 		}
-		lines = append(lines, Line{Start: d, Text: strings.TrimSpace(raw[idx+1:])})
+		label, text := splitSpeaker(strings.TrimSpace(raw[idx+1:]))
+		if label != "" {
+			speaker = label
+		}
+		lines = append(lines, Line{Start: d, Text: text, Speaker: speaker})
 	}
+	slices.SortStableFunc(lines, func(a, b Line) int { return cmp.Compare(a.Start, b.Start) })
 	return lines, nil
 }
 

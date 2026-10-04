@@ -46,7 +46,10 @@ func (m *Model) syncArtworkGraphics() tea.Cmd {
 		m.artGraphics = artworkGraphics{}
 		return cmd
 	}
-	size := m.artworkSize(m.width-4, m.nowPlayingHeight())
+	// Ask the layout for its artwork viewport so split/stacked layouts share
+	// the exact same image placement as the placeholder cells.
+	m.nowPlayingLines(m.width-4, m.nowPlayingHeight())
+	size := m.artworkSize(m.artworkViewport.Width, m.artworkViewport.Height)
 	if size.Width == 0 {
 		return nil
 	}
