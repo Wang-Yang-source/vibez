@@ -294,6 +294,7 @@ type Model struct {
 	// so they only re-render on a track change or a resize.
 	artMode             bool
 	artGraphics         artworkGraphics
+	artworkViewport     art.Size
 	artwork             artworkCache
 	artworkGen          int
 	artHTTP             *http.Client
@@ -3188,6 +3189,7 @@ func (m *Model) nowPlayingLines(contentW, h int) []string {
 // centred, sized square via the measured cell aspect ratio. While the cover
 // is still downloading its rows stay blank and it pops in when loaded.
 func (m *Model) nowPlayingArtLines(contentW, h int) []string {
+	m.artworkViewport = art.Size{Width: contentW, Height: h}
 	t := m.playerState.Track
 	if t == nil {
 		return m.nowPlayingTextLines(contentW, h)

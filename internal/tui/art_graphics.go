@@ -46,7 +46,9 @@ func (m *Model) syncArtworkGraphics() tea.Cmd {
 		m.artGraphics = artworkGraphics{}
 		return cmd
 	}
-	size := m.artworkSize(m.width-4, m.nowPlayingHeight())
+	// Prepare the actual layout viewport before uploading or resizing images.
+	m.nowPlayingLines(m.width-4, m.nowPlayingHeight())
+	size := m.artworkSize(m.artworkViewport.Width, m.artworkViewport.Height)
 	if size.Width == 0 {
 		return nil
 	}
