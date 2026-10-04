@@ -22,7 +22,16 @@ type lyricGraphics struct {
 	size    art.Size
 	visible bool
 	failed  bool
+	busy    bool
 }
+type lyricFrameMsg struct {
+	key      string
+	size     art.Size
+	snapshot *views.LyricsModel
+	data     string
+	err      error
+}
+
 type lyricFontLoadedMsg struct {
 	renderer *views.LyricRenderer
 	err      error
@@ -60,6 +69,9 @@ func (m *Model) inlineLyricLines(w, h int) []string {
 	return m.lyricsP.m.InlineLines(w, h)
 }
 func (m *Model) syncLyricGraphics() tea.Cmd {
+	if m.lyricGraphics.busy {
+		return nil
+	}
 	if !m.inlineLyrics || !m.largeLyricsAvailable() || !m.lyricsP.m.HasLyrics() {
 		if m.lyricGraphics.visible {
 			m.lyricGraphics = lyricGraphics{}
@@ -73,18 +85,20 @@ func (m *Model) syncLyricGraphics() tea.Cmd {
 		return nil
 	}
 	cw, ch := terminalCellPixels()
-	key := fmt.Sprintf("%s:%dx%d:%.2fx%.2f:%v:%v", m.lyricsP.m.CanvasKey(), size.Width, size.Height, cw, ch, styles.ColorFg, styles.ColorMuted)
+	key := fmt.Sprintf("%s:%dx%d:%.2fx%.2f:%v:%v:%v", m.lyricsP.m.CanvasKey(), size.Width, size.Height, cw, ch, styles.ColorFg, styles.ColorMuted, styles.ColorBg)
 	if m.lyricGraphics.visible && m.lyricGraphics.key == key {
 		return nil
 	}
-	if err := m.lyricRenderer.SetPixelScale(cw / 12); err != nil {
-		return nil
+	snapshot := *m.lyricsP.m
+	renderer := m.lyricRenderer
+	fg, muted, bg := styles.ColorFg, styles.ColorMuted, styles.ColorBg
+	m.lyricGraphics.busy = true
+	return func() tea.Msg {
+		if err := renderer.SetPixelScale(cw / 12); err != nil {
+			return lyricFrameMsg{err: err}
+		}
+		img := renderer.RenderCanvasColors(&snapshot, int(float64(size.Width)*cw), int(float64(size.Height)*ch), fg, muted, bg)
+		data, err := art.KittyUploadAnimation(img, lyricImageID, size)
+		return lyricFrameMsg{key: key, size: size, snapshot: &snapshot, data: data, err: err}
 	}
-	img := m.lyricRenderer.RenderCanvas(m.lyricsP.m, int(float64(size.Width)*cw), int(float64(size.Height)*ch))
-	data, err := art.KittyUpload(img, lyricImageID, size)
-	m.lyricGraphics = lyricGraphics{key: key, size: size, visible: err == nil, failed: err != nil}
-	if err != nil {
-		return nil
-	}
-	return tea.Raw(data)
 }

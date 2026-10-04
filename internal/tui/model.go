@@ -736,6 +736,18 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			cmds = append(cmds, waitForState(m.stateCh))
 		}
 
+	case lyricFrameMsg:
+		m.lyricGraphics.busy = false
+		if msg.err != nil {
+			m.lyricGraphics.failed = true
+			break
+		}
+		if !m.inlineLyrics || !m.largeLyricsAvailable() || msg.size != m.lyricViewport || !m.lyricsP.m.HasLyrics() || !m.lyricsP.m.ApplyCanvasLayout(msg.snapshot) {
+			break
+		}
+		m.lyricGraphics.key, m.lyricGraphics.size, m.lyricGraphics.visible = msg.key, msg.size, true
+		cmds = append(cmds, tea.Raw(msg.data))
+
 	case lyricFontLoadedMsg:
 		m.lyricRenderer = msg.renderer
 		if msg.err != nil {

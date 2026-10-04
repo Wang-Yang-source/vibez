@@ -2,9 +2,12 @@ package art
 
 import (
 	"bytes"
+	"compress/zlib"
 	"encoding/base64"
 	"image"
+	"image/color"
 	"image/png"
+	"io"
 	"strings"
 	"testing"
 
@@ -43,5 +46,50 @@ func TestKittyPreservesResolutionAndCellWidths(t *testing.T) {
 	}
 	if !strings.Contains(data, "U=1") || !strings.Contains(data, "q=2") {
 		t.Fatal("must use silent virtual placement")
+	}
+}
+
+func TestAnimationTransferPreservesStraightAlphaAndChunking(t *testing.T) {
+	src := image.NewNRGBA(image.Rect(0, 0, 160, 100))
+	for y := 0; y < 100; y++ {
+		for x := 0; x < 160; x++ {
+			src.SetNRGBA(x, y, color.NRGBA{R: uint8(x*17 + y), G: uint8(x + y*7), B: uint8(x*3 + y*13), A: uint8(x + y)})
+		}
+	}
+	data, err := KittyUploadAnimation(src, 0x570001, Size{40, 20})
+	if err != nil {
+		t.Fatal(err)
+	}
+	var encoded strings.Builder
+	chunks := strings.Split(data, "\x1b_G")[1:]
+	for _, chunk := range chunks {
+		_, body, ok := strings.Cut(chunk, ";")
+		if !ok {
+			t.Fatal("missing payload")
+		}
+		payload, _, _ := strings.Cut(body, "\x1b\\")
+		if len(payload) > 4096 {
+			t.Fatal("oversized graphics chunk")
+		}
+		encoded.WriteString(payload)
+	}
+	payload, err := base64.StdEncoding.DecodeString(encoded.String())
+	if err != nil {
+		t.Fatal(err)
+	}
+	reader, err := zlib.NewReader(bytes.NewReader(payload))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer reader.Close()
+	raw, err := io.ReadAll(reader)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !bytes.Equal(raw, src.Pix) {
+		t.Fatal("lossy color or alpha transfer")
+	}
+	if len(chunks) < 2 || strings.Contains(data, "f=100") || strings.Contains(data, "f=24") || !strings.Contains(data, "o=z") || !strings.Contains(data, "s=160") || !strings.Contains(data, "v=100") || !strings.Contains(chunks[len(chunks)-1], "m=0") {
+		t.Fatal("incorrect chunked RGBA protocol")
 	}
 }

@@ -21,6 +21,10 @@ type LyricRenderer struct {
 	face                 font.Face
 	parsed               *opentype.Font
 	baseSize, pixelScale float64
+	layoutKey            string
+	phrases              []canvasPhrase
+	lineY                []int
+	speakers             []string
 }
 
 func LoadLyricRenderer(path string, index int, size float64) (*LyricRenderer, error) {
@@ -47,18 +51,25 @@ func NewLyricRenderer(data []byte, index int, size float64) (*LyricRenderer, err
 }
 func (l *LyricsModel) HasLyrics() bool { return !l.loading && l.errMsg == "" && len(l.lines) > 0 }
 func (l *LyricsModel) CanvasKey() string {
-	return strconv.Itoa(l.revision) + ":" + strconv.FormatInt(int64(l.position)/int64(33e6), 10) + ":" + strconv.Itoa(int(l.canvasOffset))
+	return strconv.Itoa(l.revision) + ":" + strconv.FormatInt(int64(l.position)/int64(8e6), 10) + ":" + strconv.Itoa(int(l.canvasOffset))
 }
 
 type canvasPhrase struct {
 	text              string
 	source, offset, y int
+	width, x          int
+	mask              *image.Alpha
 }
 
 // RenderCanvas lays out large text in pixels instead of fixed terminal cells.
 // Pixel clipping of the lit foreground makes the current grapheme sweep smooth.
-func (r *LyricRenderer) RenderCanvas(l *LyricsModel, width, height int) image.Image {
-	img := image.NewNRGBA(image.Rect(0, 0, max(1, width), max(1, height)))
+func (r *LyricRenderer) RenderCanvas(l *LyricsModel, width, height int) *image.RGBA {
+	return r.RenderCanvasColors(l, width, height, styles.ColorFg, styles.ColorMuted, styles.ColorBg)
+}
+
+func (r *LyricRenderer) RenderCanvasColors(l *LyricsModel, width, height int, fg, muted, bg color.Color) *image.RGBA {
+	img := image.NewRGBA(image.Rect(0, 0, max(1, width), max(1, height)))
+	draw.Draw(img, img.Bounds(), image.NewUniform(bg), image.Point{}, draw.Src)
 	face := r.face
 	fontH := face.Metrics().Height.Ceil()
 	lineH := fontH + max(8, fontH/3)
@@ -69,40 +80,66 @@ func (r *LyricRenderer) RenderCanvas(l *LyricsModel, width, height int) image.Im
 	for anchor > 0 && l.synced && l.currentIdx >= 0 && l.lines[anchor-1].Start == l.lines[l.currentIdx].Start {
 		anchor--
 	}
-	var phrases []canvasPhrase
-	cursor, anchorY := 0, 0
-	speakers := []string{}
-	for i, line := range l.lines {
-		if line.Speaker != "" && !lyrics.IsChorus(line.Speaker) {
-			found := false
-			for _, s := range speakers {
-				found = found || s == line.Speaker
+	layoutKey := strconv.Itoa(l.revision) + ":" + strconv.Itoa(width) + ":" + strconv.FormatFloat(scale, 'f', 4, 64)
+	if r.layoutKey != layoutKey {
+		var phrases []canvasPhrase
+		cursor := 0
+		r.lineY = make([]int, len(l.lines))
+		speakers := []string{}
+		for i, line := range l.lines {
+			if line.Speaker != "" && !lyrics.IsChorus(line.Speaker) {
+				found := false
+				for _, s := range speakers {
+					found = found || s == line.Speaker
+				}
+				if !found {
+					speakers = append(speakers, line.Speaker)
+				}
 			}
-			if !found {
-				speakers = append(speakers, line.Speaker)
+			r.lineY[i] = cursor
+			text := l.speakerPrefix(i) + line.Text
+			offset, start := 0, 0
+			g := uniseg.NewGraphemes(text)
+			for g.Next() {
+				from, to := g.Positions()
+				if from > start && font.MeasureString(face, text[start:to]).Ceil() > blockW {
+					phrases = append(phrases, canvasPhrase{text: text[start:from], source: i, offset: offset, y: cursor})
+					cursor += lineH
+					start = from
+					offset = from
+				}
+			}
+			phrases = append(phrases, canvasPhrase{text: text[start:], source: i, offset: offset, y: cursor})
+			cursor += lineH
+			if i+1 == len(l.lines) || !l.synced || line.Start != l.lines[i+1].Start {
+				cursor += lineH / 2
 			}
 		}
-		if i == anchor {
-			anchorY = cursor
-		}
-		text := l.speakerPrefix(i) + line.Text
-		offset, start := 0, 0
-		g := uniseg.NewGraphemes(text)
-		for g.Next() {
-			from, to := g.Positions()
-			if from > start && font.MeasureString(face, text[start:to]).Ceil() > blockW {
-				phrases = append(phrases, canvasPhrase{text[start:from], i, offset, cursor})
-				cursor += lineH
-				start = from
-				offset = from
+		for i := range phrases {
+			phrase := &phrases[i]
+			phrase.width = font.MeasureString(face, phrase.text).Ceil()
+			phrase.x = inset
+			line := l.lines[phrase.source]
+			if len(speakers) >= 2 && line.Speaker != "" && !lyrics.IsChorus(line.Speaker) {
+				if line.Speaker == speakers[0] {
+					phrase.x = int(20 * scale)
+				} else if line.Speaker == speakers[1] {
+					phrase.x = max(0, width-int(20*scale)-phrase.width)
+				}
+			} else if lyrics.IsChorus(line.Speaker) {
+				phrase.x = (width - phrase.width) / 2
 			}
+			// Cache glyph coverage; each frame only clips and colors these masks.
+			phrase.mask = image.NewAlpha(image.Rect(-fontH, -fontH, phrase.width+fontH, fontH))
+			d := font.Drawer{Dst: phrase.mask, Src: image.White, Face: face, Dot: fixed.P(0, 0)}
+			d.DrawString(phrase.text)
 		}
-		phrases = append(phrases, canvasPhrase{text[start:], i, offset, cursor})
-		cursor += lineH
-		if i+1 == len(l.lines) || !l.synced || line.Start != l.lines[i+1].Start {
-			cursor += lineH / 2
-		}
+		r.phrases, r.speakers = phrases, speakers
+		r.layoutKey = layoutKey
 	}
+	phrases := r.phrases
+	anchorY := r.lineY[anchor]
+
 	target := float64(anchorY - height/2)
 	if !l.synced {
 		target = float64(l.scroll * lineH)
@@ -121,33 +158,17 @@ func (r *LyricRenderer) RenderCanvas(l *LyricsModel, width, height int) image.Im
 		}
 		line := l.lines[phrase.source]
 		active := l.synced && l.currentIdx >= 0 && line.Start == l.lines[l.currentIdx].Start
-		x := inset
-		textW := font.MeasureString(face, phrase.text).Ceil()
-		if len(speakers) >= 2 && line.Speaker != "" && !lyrics.IsChorus(line.Speaker) {
-			if line.Speaker == speakers[0] {
-				x = int(20 * scale)
-			} else if line.Speaker == speakers[1] {
-				x = max(0, width-int(20*scale)-textW)
-			}
-		} else if lyrics.IsChorus(line.Speaker) {
-			x = (width - textW) / 2
-		}
-		dim := color.NRGBAModel.Convert(styles.ColorMuted).(color.NRGBA)
+		x, textW := phrase.x, phrase.width
+		dim := color.NRGBAModel.Convert(muted).(color.NRGBA)
 		distance := absInt(y - height/2)
 		if distance > height/3 {
 			dim.A = 115
 		} else if distance > height/5 {
 			dim.A = 190
 		}
-		drawer := font.Drawer{Dst: img, Src: image.NewUniform(dim), Face: face, Dot: fixed.P(x, y)}
-		drawer.DrawString(phrase.text)
+		bounds := phrase.mask.Bounds().Add(image.Pt(x, y)).Intersect(img.Bounds())
+		draw.DrawMask(img, bounds, image.NewUniform(dim), image.Point{}, phrase.mask, bounds.Min.Sub(image.Pt(x, y)), draw.Over)
 		if active || !l.synced {
-			lit := image.NewNRGBA(img.Bounds())
-			d := font.Drawer{Dst: lit, Src: image.NewUniform(color.NRGBAModel.Convert(styles.ColorFg).(color.NRGBA)), Face: face, Dot: fixed.P(x, y)}
-			d.DrawString(phrase.text)
-			// Overlay at a one-pixel offset gives the active line a stronger weight.
-			d.Dot = fixed.P(x+1, y)
-			d.DrawString(phrase.text)
 			highlight := textW
 			if l.synced {
 				complete, partial := l.lineProgress(phrase.source)
@@ -163,7 +184,7 @@ func (r *LyricRenderer) RenderCanvas(l *LyricsModel, width, height int) image.Im
 			}
 			area := image.Rect(x, max(0, y-fontH), x+highlight+1, min(height, y+fontH/3)).Intersect(img.Bounds())
 			if highlight > 0 {
-				draw.Draw(img, area, lit, area.Min, draw.Over)
+				draw.DrawMask(img, area, image.NewUniform(fg), image.Point{}, phrase.mask, area.Min.Sub(image.Pt(x, y)), draw.Over)
 			}
 		}
 	}
@@ -189,4 +210,19 @@ func (r *LyricRenderer) SetPixelScale(scale float64) error {
 	r.face = face
 	r.pixelScale = scale
 	return nil
+}
+
+// ApplyCanvasLayout accepts only layout geometry from a completed worker frame;
+// playback position and lyric selection remain owned by the UI event loop.
+func (l *LyricsModel) ApplyCanvasLayout(frame *LyricsModel) bool {
+	if l.revision != frame.revision {
+		return false
+	}
+	l.canvasTarget = frame.canvasTarget
+	if !l.canvasReady || l.canvasWidth != frame.canvasWidth || l.canvasHeight != frame.canvasHeight || absFloat(l.canvasTarget-l.canvasOffset) > float64(frame.canvasHeight) {
+		l.canvasOffset = frame.canvasOffset
+	}
+	l.canvasReady = frame.canvasReady
+	l.canvasWidth, l.canvasHeight = frame.canvasWidth, frame.canvasHeight
+	return true
 }
