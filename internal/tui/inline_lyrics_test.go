@@ -10,6 +10,7 @@ import (
 	tea "charm.land/bubbletea/v2"
 	"github.com/charmbracelet/x/ansi"
 	"github.com/simone-vibes/vibez/internal/lyrics"
+	"github.com/simone-vibes/vibez/internal/player"
 	"github.com/simone-vibes/vibez/internal/provider"
 )
 
@@ -67,5 +68,18 @@ func TestFailedLyricsRetryWithoutHidingPanel(t *testing.T) {
 	m.lyricsP.m.SetLyrics(nil, fmt.Errorf("lrclib: status 503"))
 	if m.handleNormalKey(tea.KeyPressMsg{Text: "y"}, "y") == nil || !m.inlineLyrics {
 		t.Fatal("retry hides panel or does not fetch")
+	}
+}
+
+func TestLyricsFetchAfterOptimisticSearchSelection(t *testing.T) {
+	m := newModel(nil)
+	m.cfg.InlineLyrics = true
+	m.inlineLyrics = true
+	track := &provider.Track{ID: "new-song", Title: "同名歌曲"}
+	m.playerState.Track = track // search/library displays selection before SDK confirms it
+	m.lastLyricsTrackID = "old-song"
+	m.Update(playerStateMsg(player.State{Track: track, Playing: true, Position: time.Second}))
+	if m.lastLyricsTrackID != "new-song" || !strings.Contains(ansi.Strip(strings.Join(m.lyricsP.m.InlineLines(80, 10), "\n")), "Loading lyrics") {
+		t.Fatal("optimistic selection suppresses lyrics fetch")
 	}
 }
