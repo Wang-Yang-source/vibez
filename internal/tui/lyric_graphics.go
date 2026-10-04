@@ -85,13 +85,13 @@ func (m *Model) syncLyricGraphics() tea.Cmd {
 		return nil
 	}
 	cw, ch := terminalCellPixels()
-	key := fmt.Sprintf("%s:%dx%d:%.2fx%.2f:%v:%v:%v", m.lyricsP.m.CanvasKey(), size.Width, size.Height, cw, ch, styles.ColorFg, styles.ColorMuted, styles.ColorBg)
+	key := fmt.Sprintf("%s:%dx%d:%.2fx%.2f:%v:%v:%v", m.lyricsP.m.CanvasKey(), size.Width, size.Height, cw, ch, styles.ColorFg, styles.ColorMuted, m.terminalBackground)
 	if m.lyricGraphics.visible && m.lyricGraphics.key == key {
 		return nil
 	}
 	snapshot := *m.lyricsP.m
 	renderer := m.lyricRenderer
-	fg, muted, bg := styles.ColorFg, styles.ColorMuted, styles.ColorBg
+	fg, muted, bg := styles.ColorFg, styles.ColorMuted, m.terminalBackground
 	m.lyricGraphics.busy = true
 	return func() tea.Msg {
 		if err := renderer.SetPixelScale(cw / 12); err != nil {

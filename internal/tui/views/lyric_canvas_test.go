@@ -4,6 +4,7 @@ import (
 	"github.com/simone-vibes/vibez/internal/lyrics"
 	"golang.org/x/image/font/gofont/goregular"
 	"image"
+	"image/color"
 	"testing"
 	"time"
 )
@@ -42,5 +43,20 @@ func TestLyricCanvasProgressAndDuet(t *testing.T) {
 				t.Fatal("seeking back must restore earlier highlight")
 			}
 		}
+	}
+}
+
+func TestLyricCanvasUsesTerminalBackgroundOrTransparency(t *testing.T) {
+	r, _ := NewLyricRenderer(goregular.TTF, 0, 32)
+	l := NewLyrics()
+	l.SetLyrics(&lyrics.Result{Lines: []lyrics.Line{{Text: "Test lyric"}}, Synced: true}, nil)
+	bg := color.RGBA{R: 30, G: 30, B: 46, A: 255}
+	img := r.RenderCanvasColors(l, 800, 400, color.White, color.Gray{Y: 120}, bg)
+	if img.RGBAAt(0, 0) != bg {
+		t.Fatal("canvas does not match the supplied terminal background")
+	}
+	transparent := r.RenderCanvasColors(l, 800, 400, color.White, color.Gray{Y: 120}, nil)
+	if transparent.RGBAAt(0, 0).A != 0 {
+		t.Fatal("unknown terminal background must remain transparent")
 	}
 }

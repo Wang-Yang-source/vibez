@@ -1,9 +1,12 @@
 package tui
 
 import (
+	tea "charm.land/bubbletea/v2"
 	"github.com/simone-vibes/vibez/internal/lyrics"
+	"github.com/simone-vibes/vibez/internal/tui/styles"
 	"github.com/simone-vibes/vibez/internal/tui/views"
 	"golang.org/x/image/font/gofont/goregular"
+	"image/color"
 	"testing"
 	"time"
 )
@@ -31,5 +34,18 @@ func TestLyricWorkerDoesNotBlockOrOverwriteNewSong(t *testing.T) {
 	_, _ = m.Update(frame)
 	if m.lyricGraphics.visible {
 		t.Fatal("old song frame became visible")
+	}
+}
+
+func TestTerminalBackgroundDoesNotChangeCoverTheme(t *testing.T) {
+	m := newModel(nil)
+	bg := color.RGBA{R: 30, G: 30, B: 46, A: 255}
+	beforeBg, beforeFg := styles.ColorBg, styles.ColorFg
+	_, _ = m.Update(tea.BackgroundColorMsg{Color: bg})
+	if styles.ColorBg != beforeBg || styles.ColorFg != beforeFg {
+		t.Fatal("terminal color response changed the music theme")
+	}
+	if m.terminalBackground != bg {
+		t.Fatal("terminal color response was ignored")
 	}
 }

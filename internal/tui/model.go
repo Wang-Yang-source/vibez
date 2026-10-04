@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"github.com/simone-vibes/vibez/internal/tui/locale"
 	"image"
+	"image/color"
 	"math/rand"
 	"net/http"
 	"slices"
@@ -283,18 +284,19 @@ const radioMaxRetries = 5 // give up re-arming after this many consecutive failu
 // ── Model ─────────────────────────────────────────────────────────────────
 
 type Model struct {
-	lyricRenderer    *views.LyricRenderer
-	lyricGraphics    lyricGraphics
-	lyricViewport    art.Size
-	lastStateTime    time.Time
-	frameRate        int
-	lastFrameTime    time.Time
-	lastRefreshProbe time.Time
-	glowElapsed      time.Duration
-	ui               locale.Locale
-	cfg              *config.Config
-	provider         provider.Provider
-	player           player.Player
+	lyricRenderer      *views.LyricRenderer
+	lyricGraphics      lyricGraphics
+	lyricViewport      art.Size
+	lastStateTime      time.Time
+	terminalBackground color.Color
+	frameRate          int
+	lastFrameTime      time.Time
+	lastRefreshProbe   time.Time
+	glowElapsed        time.Duration
+	ui                 locale.Locale
+	cfg                *config.Config
+	provider           provider.Provider
+	player             player.Player
 
 	width, height int
 
@@ -474,7 +476,7 @@ func (m *Model) Init() tea.Cmd {
 	cmds := []tea.Cmd{
 		tick(),
 		m.animationTick(), detectRefreshRate(),
-		introTick(),
+		introTick(), tea.RequestBackgroundColor,
 	}
 	if m.cfg.LyricsFontScale > 1 && m.supportsArtGraphics != nil && m.supportsArtGraphics() {
 		cmds = append(cmds, m.loadLyricFontCmd())
@@ -529,6 +531,10 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	var cmds []tea.Cmd
 
 	switch msg := msg.(type) {
+	case tea.BackgroundColorMsg:
+		if msg.Color != nil {
+			m.terminalBackground = msg.Color
+		}
 
 	case tea.WindowSizeMsg:
 		m.width = msg.Width

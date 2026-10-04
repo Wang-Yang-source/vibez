@@ -93,3 +93,34 @@ func TestAnimationTransferPreservesStraightAlphaAndChunking(t *testing.T) {
 		t.Fatal("incorrect chunked RGBA protocol")
 	}
 }
+
+func TestAnimationTransferUnpremultipliesTransparentRGBA(t *testing.T) {
+	src := image.NewRGBA(image.Rect(0, 0, 2, 1))
+	src.SetRGBA(0, 0, color.RGBA{R: 128, A: 128})
+	data, err := KittyUploadAnimation(src, 1, Size{2, 1})
+	if err != nil {
+		t.Fatal(err)
+	}
+	var encoded strings.Builder
+	for _, chunk := range strings.Split(data, "\x1b_G")[1:] {
+		_, body, _ := strings.Cut(chunk, ";")
+		payload, _, _ := strings.Cut(body, "\x1b\\")
+		encoded.WriteString(payload)
+	}
+	compressed, err := base64.StdEncoding.DecodeString(encoded.String())
+	if err != nil {
+		t.Fatal(err)
+	}
+	reader, err := zlib.NewReader(bytes.NewReader(compressed))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer reader.Close()
+	raw, err := io.ReadAll(reader)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !bytes.Equal(raw, []byte{255, 0, 0, 128, 0, 0, 0, 0}) {
+		t.Fatalf("incorrect straight alpha pixels: %v", raw)
+	}
+}

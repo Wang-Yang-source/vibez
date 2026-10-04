@@ -6,6 +6,7 @@ import (
 	"encoding/base64"
 	"fmt"
 	"image"
+	"image/draw"
 	"os"
 	"strings"
 	"sync"
@@ -82,10 +83,15 @@ func KittyUploadAnimation(img image.Image, id int, size Size) (string, error) {
 	case *image.NRGBA:
 		pixels, stride = packed.Pix, packed.Stride
 	case *image.RGBA:
-		if !packed.Opaque() {
-			return "", fmt.Errorf("animation RGBA canvas must be opaque")
+		if packed.Opaque() {
+			pixels, stride = packed.Pix, packed.Stride
+		} else {
+			// Transparent fallback until OSC 11 supplies the terminal background.
+			// Kitty expects straight alpha, while Go RGBA stores premultiplied colors.
+			straight := image.NewNRGBA(bounds)
+			draw.Draw(straight, bounds, packed, bounds.Min, draw.Src)
+			pixels, stride = straight.Pix, straight.Stride
 		}
-		pixels, stride = packed.Pix, packed.Stride
 	default:
 		return "", fmt.Errorf("animation requires packed pixels")
 	}

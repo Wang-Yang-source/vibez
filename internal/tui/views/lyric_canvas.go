@@ -69,7 +69,9 @@ func (r *LyricRenderer) RenderCanvas(l *LyricsModel, width, height int) *image.R
 
 func (r *LyricRenderer) RenderCanvasColors(l *LyricsModel, width, height int, fg, muted, bg color.Color) *image.RGBA {
 	img := image.NewRGBA(image.Rect(0, 0, max(1, width), max(1, height)))
-	draw.Draw(img, img.Bounds(), image.NewUniform(bg), image.Point{}, draw.Src)
+	if bg != nil {
+		draw.Draw(img, img.Bounds(), image.NewUniform(bg), image.Point{}, draw.Src)
+	}
 	face := r.face
 	fontH := face.Metrics().Height.Ceil()
 	lineH := fontH + max(8, fontH/3)
