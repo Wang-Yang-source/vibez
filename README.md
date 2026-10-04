@@ -237,6 +237,10 @@ uses Nord, and pop uses the default palette. Missing or unknown genres restore
 your selected startup theme. Queue metadata is used when playback items omit
 genres. This uses catalog tags, not audio analysis.
 
+Set `"ui_language": "zh-CN"` for Chinese interface labels and prompts.
+The default is English. This setting does not translate commands, track names
+or artist metadata.
+
 ### Custom themes
 
 Create `~/.config/vibez/themes/<name>.json` with any subset of fields — missing or invalid values fall back to `default`:
@@ -485,10 +489,16 @@ MIT © Simone Pelosi
 Set `"inline_lyrics": true` in your existing config. On a wide terminal the
 cover and track information appear on the left, with synchronized lyrics on
 the right; Queue and Vibe remain below. Press `y` to hide/show inline lyrics.
-Narrow terminals stack the cover and lyrics.
+Narrow terminals stack the cover and lyrics. Phrases wrap into a narrow column
+with spacing, a bold current phrase and fading context. Timed phrases scroll
+using the existing animation clock; untimed lyrics support manual scrolling.
 
 Explicit singer labels such as `甲：`, `乙：`, `[男]`, `[女]`, or `【合唱】`
 are preserved. The first two singers align left/right inside the lyric area;
 chorus lines are centered. Lines at the same timestamp highlight together.
 Lyrics without speaker labels keep the normal single-voice display; the app
-does not guess singers from audio. Missing lyrics display a placeholder.
+does not guess singers from audio. Lyrics come from LRCLIB, independently of
+Apple Music's own lyric catalogue. Exact lookup misses retry with less specific
+metadata; bilingual/featured titles are matched with duration checks and
+ambiguous recordings are rejected. Network/service errors are shown separately
+from missing results. Press `y` to retry a failed request.
