@@ -27,6 +27,7 @@ type LyricRenderer struct {
 	phrases              []canvasPhrase
 	lineY                []int
 	speakers             []string
+	animationCanvas      *image.RGBA
 }
 
 func LoadLyricRenderer(path string, index int, size float64) (*LyricRenderer, error) {
@@ -70,7 +71,24 @@ func (r *LyricRenderer) RenderCanvas(l *LyricsModel, width, height int) *image.R
 }
 
 func (r *LyricRenderer) RenderCanvasColors(l *LyricsModel, width, height int, fg, muted, bg color.Color) *image.RGBA {
-	img := image.NewRGBA(image.Rect(0, 0, max(1, width), max(1, height)))
+	return r.renderCanvasInto(image.NewRGBA(image.Rect(0, 0, max(1, width), max(1, height))), l, width, height, fg, muted, bg)
+}
+
+// RenderAnimationCanvas returns worker-owned storage, valid until the next
+// call. The serialized graphics worker encodes it before allowing another frame.
+// RenderCanvasColors keeps returning independent snapshots for other callers.
+func (r *LyricRenderer) RenderAnimationCanvas(l *LyricsModel, width, height int, fg, muted, bg color.Color) *image.RGBA {
+	bounds := image.Rect(0, 0, max(1, width), max(1, height))
+	if r.animationCanvas == nil || r.animationCanvas.Bounds() != bounds {
+		r.animationCanvas = image.NewRGBA(bounds)
+	}
+	return r.renderCanvasInto(r.animationCanvas, l, width, height, fg, muted, bg)
+}
+
+func (r *LyricRenderer) renderCanvasInto(img *image.RGBA, l *LyricsModel, width, height int, fg, muted, bg color.Color) *image.RGBA {
+	if bg == nil {
+		clear(img.Pix)
+	}
 	if bg != nil {
 		draw.Draw(img, img.Bounds(), image.NewUniform(bg), image.Point{}, draw.Src)
 	}

@@ -91,3 +91,29 @@ func TestLyricCanvasDoesNotReserveRowsForSingerMarkers(t *testing.T) {
 		t.Fatal("speaker metadata introduced extra lyric spacing")
 	}
 }
+
+func TestAnimationCanvasReuseClearsAndResizes(t *testing.T) {
+	r, _ := NewLyricRenderer(goregular.TTF, 0, 32)
+	l := NewLyrics()
+	l.SetLyrics(&lyrics.Result{Synced: true, Lines: []lyrics.Line{{Text: "Test phrase"}}}, nil)
+	bg := color.RGBA{R: 30, G: 30, B: 46, A: 255}
+	first := r.RenderAnimationCanvas(l, 800, 400, color.White, color.Gray{Y: 120}, bg)
+	first.Pix[0] = 255 // an old frame must not leak into the next frame
+	next := r.RenderAnimationCanvas(l, 800, 400, color.White, color.Gray{Y: 120}, nil)
+	if first != next {
+		t.Fatal("same-sized frames reallocated")
+	}
+	expected := r.RenderCanvasColors(l, 800, 400, color.White, color.Gray{Y: 120}, nil)
+	for i, b := range expected.Pix {
+		if next.Pix[i] != b {
+			t.Fatal("reused transparent canvas retained old pixels")
+		}
+	}
+	resized := r.RenderAnimationCanvas(l, 700, 300, color.White, color.Gray{Y: 120}, bg)
+	if resized == next || resized.Bounds() != image.Rect(0, 0, 700, 300) {
+		t.Fatal("resize did not replace canvas")
+	}
+	if resized.RGBAAt(0, 0) != bg {
+		t.Fatal("resized background wrong")
+	}
+}

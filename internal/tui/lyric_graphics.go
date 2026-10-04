@@ -97,7 +97,7 @@ func (m *Model) syncLyricGraphics() tea.Cmd {
 		if err := renderer.SetPixelScale(cw / 12); err != nil {
 			return lyricFrameMsg{err: err}
 		}
-		img := renderer.RenderCanvasColors(&snapshot, int(float64(size.Width)*cw), int(float64(size.Height)*ch), fg, muted, bg)
+		img := renderer.RenderAnimationCanvas(&snapshot, int(float64(size.Width)*cw), int(float64(size.Height)*ch), fg, muted, bg)
 		data, err := art.KittyUploadAnimation(img, lyricImageID, size)
 		return lyricFrameMsg{key: key, size: size, snapshot: &snapshot, data: data, err: err}
 	}

@@ -65,15 +65,19 @@ func KittyLines(id int, size Size) []string {
 	return lines
 }
 
+var animationBuffers = sync.Pool{New: func() any { return new(bytes.Buffer) }}
+
 var animationCompressors = sync.Pool{New: func() any { w, _ := zlib.NewWriterLevel(&bytes.Buffer{}, zlib.BestSpeed); return w }}
 
 // KittyUploadAnimation uses the standard library's fast lossless compressor.
 // x/ansi's image encoder offers neither a compression level nor a packed-pixel
 // fast path; retain its protocol options and framing instead of encoding PNG.
 func KittyUploadAnimation(img image.Image, id int, size Size) (string, error) {
-	var compressed bytes.Buffer
+	compressed := animationBuffers.Get().(*bytes.Buffer)
+	compressed.Reset()
+	defer animationBuffers.Put(compressed)
 	zw := animationCompressors.Get().(*zlib.Writer)
-	zw.Reset(&compressed)
+	zw.Reset(compressed)
 	defer animationCompressors.Put(zw)
 	var err error
 	bounds := img.Bounds()
