@@ -339,7 +339,7 @@ func (m *SearchModel) View() string {
 				Foreground(currentAccent).
 				Bold(true).
 				Italic(true)
-			sb.WriteString("  " + hs.Render(row.label) + "\n")
+			sb.WriteString("  " + hs.Render(m.Locale.Text(row.label)) + "\n")
 			linesLeft--
 			continue
 		}
