@@ -1059,7 +1059,7 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case views.PlayTracksMsg:
 		if msg.Track != nil {
-			m.playerState.Track = msg.Track
+			m.prepareSelectedTrack(msg.Track)
 		}
 		m.playerState.Loading = true
 		m.playerState.Playing = false
@@ -1273,7 +1273,7 @@ func (m *Model) handleSearchKey(k string, msg tea.KeyPressMsg) tea.Cmd {
 			m.appendLog(fmt.Sprintf("[queue] play now: %s — %s", tc.Artist, tc.Title))
 			m.queueTracks = []provider.Track{tc}
 			m.queueIDs = []string{views.PlaybackID(tc)}
-			m.playerState.Track = &tc
+			m.prepareSelectedTrack(&tc)
 			m.playerState.Loading = true
 			m.playerState.Playing = false
 			m.playerState.Position = 0
@@ -2382,7 +2382,7 @@ func (m *Model) handleNormalKey(msg tea.KeyPressMsg, k string) tea.Cmd {
 			tc := *t
 			m.queueTracks = []provider.Track{tc}
 			m.queueIDs = []string{views.PlaybackID(tc)}
-			m.playerState.Track = &tc
+			m.prepareSelectedTrack(&tc)
 			m.playerState.Loading = true
 			m.playerState.Playing = false
 			m.playerState.Position = 0
@@ -2992,7 +2992,7 @@ func (m *Model) playNextCmd(label string, tracks []provider.Track, ids []string)
 	if origLen == 0 {
 		m.queueTracks = tracks
 		m.queueIDs = ids
-		m.playerState.Track = &tracks[0]
+		m.prepareSelectedTrack(&tracks[0])
 		m.playerState.Loading = true
 		m.playerState.Playing = false
 		m.playerState.Position = 0
@@ -4176,4 +4176,12 @@ func (m *Model) visibleCommandText(w int) string {
 		text = text[1:]
 	}
 	return string(text)
+}
+
+// An optimistic selection has not been confirmed by the playback backend yet.
+// Invalidate the previous fetch so its result cannot label the newly selected song.
+func (m *Model) prepareSelectedTrack(track *provider.Track) {
+	m.playerState.Track = track
+	m.lastLyricsTrackID = ""
+	m.lyricsP.m.SetLoading()
 }

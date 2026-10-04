@@ -83,3 +83,18 @@ func TestLyricsFetchAfterOptimisticSearchSelection(t *testing.T) {
 		t.Fatal("optimistic selection suppresses lyrics fetch")
 	}
 }
+
+func TestSelectingTrackClearsPreviousLyrics(t *testing.T) {
+	m := New(testCfg(), &mockProvider{}, nil, Options{})
+	m.lastLyricsTrackID = "old"
+	m.lyricsP.m.SetLyrics(&lyrics.Result{Synced: true, Lines: []lyrics.Line{{Text: "previous song"}}}, nil)
+	next := &provider.Track{ID: "new", Title: "next song"}
+	m.prepareSelectedTrack(next)
+	if m.lyricsP.m.HasLyrics() || m.lastLyricsTrackID != "" || m.playerState.Track != next {
+		t.Fatal("new selection retained old lyrics")
+	}
+	m.Update(lyricsResultMsg{trackID: "old", result: &lyrics.Result{Lines: []lyrics.Line{{Text: "stale reply"}}}})
+	if m.lyricsP.m.HasLyrics() {
+		t.Fatal("old request repopulated lyrics after selecting a new track")
+	}
+}
