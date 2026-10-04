@@ -211,6 +211,25 @@ Set the `theme` key in `~/.config/vibez/config.json`:
 
 **Built-in themes:** `default`, `dracula`, `gruvbox`, `nord`
 
+
+### Optional music interface
+
+Add these keys to your existing config to hide the shortcut footers and let
+track genre metadata select a built-in palette and header character:
+
+```json
+{
+  "hide_hints": true,
+  "genre_theme": true
+}
+```
+
+Both options default to `false`. Shortcuts still work with hints hidden.
+Rock/electronic uses Dracula, hip-hop/R&B/jazz uses Gruvbox, classical/ambient
+uses Nord, and pop uses the default palette. Missing or unknown genres restore
+your selected startup theme. Queue metadata is used when playback items omit
+genres. This uses catalog tags, not audio analysis.
+
 ### Custom themes
 
 Create `~/.config/vibez/themes/<name>.json` with any subset of fields — missing or invalid values fall back to `default`:
