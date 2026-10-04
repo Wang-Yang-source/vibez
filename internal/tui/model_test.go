@@ -153,6 +153,7 @@ func testCfg() *config.Config {
 func newModel(plyr player.Player) *Model {
 	m := New(testCfg(), &mockProvider{}, plyr, Options{})
 	m.supportsArtGraphics = func() bool { return false }
+	m.hideHints = false
 	return m
 }
 

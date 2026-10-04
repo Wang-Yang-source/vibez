@@ -298,6 +298,7 @@ type Model struct {
 	artwork             artworkCache
 	artworkGen          int
 	artHTTP             *http.Client
+	hideHints           bool
 	supportsArtColor    func() bool
 	supportsArtGraphics func() bool
 	artCellAsp          float64          // terminal cell height/width ratio, for square art
@@ -390,6 +391,7 @@ func New(cfg *config.Config, prov provider.Provider, plyr player.Player, opts Op
 		memProfiling: opts.MemProfiling,
 		preMuteVol:   -1,
 		artMode:      cfg.AlbumArt,
+		hideHints:    true,
 		artwork:      artworkCache{rendered: map[art.Size][]string{}},
 		artHTTP:      &http.Client{Timeout: 5 * time.Second},
 		// Album art needs at least a 256-colour terminal to look reasonable;
@@ -3086,11 +3088,14 @@ func (m *Model) renderBoxLayout() string {
 		}
 	}
 
-	// ── Join or full divider ──
-	if fullWidth {
-		sb.WriteString("├" + strings.Repeat("─", inner) + "┤\n")
-	} else {
-		sb.WriteString("├" + strings.Repeat("─", splitW) + "┴" + strings.Repeat("─", rightW) + "┤\n")
+	if !m.hideHints {
+		// ── Join or full divider ──
+		if fullWidth {
+			sb.WriteString("├" + strings.Repeat("─", inner) + "┤\n")
+		} else {
+			sb.WriteString("├" + strings.Repeat("─", splitW) + "┴" + strings.Repeat("─", rightW) + "┤\n")
+		}
+
 	}
 
 	// ── Status bar (context/mode then playback, each wrapped as needed) ──
@@ -3490,7 +3495,11 @@ func (m *Model) searchLines(contentW, h int) []string {
 	sep := muted.Render(strings.Repeat("─", contentW))
 
 	// Reserve input(1) + sep(1) + footerSep(1) + footer(1) = 4 lines.
-	listH := max(1, h-4)
+	reserved := 4
+	if m.hideHints {
+		reserved = 2
+	}
+	listH := max(1, h-reserved)
 	m.search.SetSize(contentW, listH)
 	listView := m.search.View()
 	if listView == "" && !m.search.Loading() && m.searchQuery != "" {
@@ -3514,7 +3523,9 @@ func (m *Model) searchLines(contentW, h int) []string {
 		"  ·  " + accent.Render("Esc") + muted.Render(" close")
 
 	result := append([]string{inputLine, sep}, listLines...)
-	result = append(result, footerSep, footer)
+	if !m.hideHints {
+		result = append(result, footerSep, footer)
+	}
 	for len(result) < h {
 		result = append(result, "")
 	}
@@ -3694,6 +3705,9 @@ func (m *Model) commandLines(_ int, h int) []string {
 // each already wrapped to fit width w. The count varies with terminal width,
 // so panelHeight consults it rather than assuming a fixed two rows.
 func (m *Model) statusLines(w int) []string {
+	if m.hideHints {
+		return nil
+	}
 	return append(m.statusNavLines(w), m.statusPlayLines(w)...)
 }
 
@@ -3703,7 +3717,11 @@ func (m *Model) statusLines(w int) []string {
 // which grow as hints wrap on a narrow terminal — so both are measured rather
 // than assumed.
 func (m *Model) panelHeight() int {
-	fixedOverhead := 6 + m.nowPlayingHeight() + len(m.statusLines(m.width-4))
+	borderRows := 6
+	if m.hideHints {
+		borderRows = 5
+	}
+	fixedOverhead := borderRows + m.nowPlayingHeight() + len(m.statusLines(m.width-4))
 	return max(3, m.height-fixedOverhead)
 }
 
