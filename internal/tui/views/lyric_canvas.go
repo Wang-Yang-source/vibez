@@ -17,7 +17,11 @@ import (
 
 // LyricRenderer reuses x/image's font parser/rasterizer and the terminal's
 // existing graphics transport. System fonts are read, never redistributed.
-type LyricRenderer struct{ face font.Face }
+type LyricRenderer struct {
+	face                 font.Face
+	parsed               *opentype.Font
+	baseSize, pixelScale float64
+}
 
 func LoadLyricRenderer(path string, index int, size float64) (*LyricRenderer, error) {
 	data, err := os.ReadFile(path)
@@ -39,7 +43,7 @@ func NewLyricRenderer(data []byte, index int, size float64) (*LyricRenderer, err
 	if err != nil {
 		return nil, err
 	}
-	return &LyricRenderer{face: face}, nil
+	return &LyricRenderer{face: face, parsed: parsed, baseSize: size, pixelScale: 1}, nil
 }
 func (l *LyricsModel) HasLyrics() bool { return !l.loading && l.errMsg == "" && len(l.lines) > 0 }
 func (l *LyricsModel) CanvasKey() string {
@@ -58,7 +62,8 @@ func (r *LyricRenderer) RenderCanvas(l *LyricsModel, width, height int) image.Im
 	face := r.face
 	fontH := face.Metrics().Height.Ceil()
 	lineH := fontH + max(8, fontH/3)
-	blockW := min(max(1, width-48), 780)
+	scale := r.pixelScale
+	blockW := min(max(1, width-int(48*scale)), int(780*scale))
 	inset := (width - blockW) / 2
 	anchor := max(0, l.currentIdx)
 	for anchor > 0 && l.synced && l.currentIdx >= 0 && l.lines[anchor-1].Start == l.lines[l.currentIdx].Start {
@@ -120,9 +125,9 @@ func (r *LyricRenderer) RenderCanvas(l *LyricsModel, width, height int) image.Im
 		textW := font.MeasureString(face, phrase.text).Ceil()
 		if len(speakers) >= 2 && line.Speaker != "" && !lyrics.IsChorus(line.Speaker) {
 			if line.Speaker == speakers[0] {
-				x = 20
+				x = int(20 * scale)
 			} else if line.Speaker == speakers[1] {
-				x = max(0, width-20-textW)
+				x = max(0, width-int(20*scale)-textW)
 			}
 		} else if lyrics.IsChorus(line.Speaker) {
 			x = (width - textW) / 2
@@ -169,4 +174,19 @@ func absFloat(v float64) float64 {
 		return -v
 	}
 	return v
+}
+
+// SetPixelScale rasterizes at the terminal's native cell pixel density.
+func (r *LyricRenderer) SetPixelScale(scale float64) error {
+	if scale == r.pixelScale {
+		return nil
+	}
+	face, err := opentype.NewFace(r.parsed, &opentype.FaceOptions{Size: r.baseSize * scale, DPI: 72, Hinting: font.HintingFull})
+	if err != nil {
+		return err
+	}
+	_ = r.face.Close()
+	r.face = face
+	r.pixelScale = scale
+	return nil
 }

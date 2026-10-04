@@ -72,15 +72,15 @@ func (m *Model) syncLyricGraphics() tea.Cmd {
 	if size.Width < 20 || size.Height < 6 {
 		return nil
 	}
-	key := fmt.Sprintf("%s:%dx%d:%v:%v", m.lyricsP.m.CanvasKey(), size.Width, size.Height, styles.ColorFg, styles.ColorMuted)
+	cw, ch := terminalCellPixels()
+	key := fmt.Sprintf("%s:%dx%d:%.2fx%.2f:%v:%v", m.lyricsP.m.CanvasKey(), size.Width, size.Height, cw, ch, styles.ColorFg, styles.ColorMuted)
 	if m.lyricGraphics.visible && m.lyricGraphics.key == key {
 		return nil
 	}
-	aspect := m.artCellAsp
-	if aspect <= 0 {
-		aspect = 2
+	if err := m.lyricRenderer.SetPixelScale(cw / 12); err != nil {
+		return nil
 	}
-	img := m.lyricRenderer.RenderCanvas(m.lyricsP.m, size.Width*12, int(float64(size.Height*12)*aspect))
+	img := m.lyricRenderer.RenderCanvas(m.lyricsP.m, int(float64(size.Width)*cw), int(float64(size.Height)*ch))
 	data, err := art.KittyUpload(img, lyricImageID, size)
 	m.lyricGraphics = lyricGraphics{key: key, size: size, visible: err == nil, failed: err != nil}
 	if err != nil {

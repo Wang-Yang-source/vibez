@@ -39,3 +39,16 @@ func cellAspect() float64 {
 		return r
 	}
 }
+
+// terminalCellPixels reuses the terminal geometry ioctl, including HiDPI pixels.
+func terminalCellPixels() (float64, float64) {
+	ws, err := unix.IoctlGetWinsize(int(os.Stdout.Fd()), unix.TIOCGWINSZ)
+	if err == nil && ws.Xpixel > 0 && ws.Ypixel > 0 && ws.Col > 0 && ws.Row > 0 {
+		cw, ch := float64(ws.Xpixel)/float64(ws.Col), float64(ws.Ypixel)/float64(ws.Row)
+		if cw >= 4 && cw <= 96 && ch >= 8 && ch <= 192 {
+			return cw, ch
+		}
+	}
+	// Supersample unknown geometry instead of enlarging a low-resolution image.
+	return 24, 24 * cellAspect()
+}
