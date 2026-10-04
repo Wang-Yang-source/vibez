@@ -168,3 +168,18 @@ func (l *LyricsModel) speakerPrefix(index int) string {
 	}
 	return line.Speaker + " · "
 }
+
+func (l *LyricsModel) lineActive(index int) bool {
+	if !l.synced || l.currentIdx < 0 {
+		return false
+	}
+	line := l.lines[index]
+	end := line.End
+	if end <= line.Start && len(line.Words) > 0 {
+		end = line.Words[len(line.Words)-1].End
+	}
+	if end > line.Start {
+		return l.position >= line.Start && l.position < end
+	}
+	return line.Start == l.lines[l.currentIdx].Start
+}

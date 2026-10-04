@@ -91,7 +91,7 @@ func (l *LyricsModel) InlineLines(w, h int) []string {
 		}
 		item := visual[idx]
 		line := l.lines[item.source]
-		active := l.synced && l.currentIdx >= 0 && line.Start == l.lines[l.currentIdx].Start
+		active := l.lineActive(item.source)
 		distance := absInt(idx - anchorRow)
 		color := styles.ColorMuted
 		if distance > h/3 {

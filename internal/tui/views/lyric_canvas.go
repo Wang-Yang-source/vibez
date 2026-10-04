@@ -182,8 +182,7 @@ func (r *LyricRenderer) renderCanvasInto(img *image.RGBA, l *LyricsModel, width,
 		if y+fontH < 0 || y-fontH > height {
 			continue
 		}
-		line := l.lines[phrase.source]
-		active := l.synced && l.currentIdx >= 0 && line.Start == l.lines[l.currentIdx].Start
+		active := l.lineActive(phrase.source)
 		x, textW := phrase.x, phrase.width
 		dim := color.NRGBAModel.Convert(muted).(color.NRGBA)
 		distance := absInt(y - height/2)
