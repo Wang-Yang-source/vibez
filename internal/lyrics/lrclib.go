@@ -50,7 +50,10 @@ var errNotFound = errors.New("lyrics not found")
 func (c *Client) Fetch(ctx context.Context, artist, title, album string, duration time.Duration) (*Result, error) {
 	result, err := c.fetch(ctx, artist, title, album, duration)
 	if errors.Is(err, errNotFound) && (album != "" || duration > 0) {
-		return c.fetch(ctx, artist, title, "", 0)
+		result, err = c.fetch(ctx, artist, title, "", 0)
+	}
+	if errors.Is(err, errNotFound) {
+		return c.searchFallback(ctx, artist, title, duration)
 	}
 	return result, err
 }
@@ -90,15 +93,14 @@ func (c *Client) fetch(ctx context.Context, artist, title, album string, duratio
 		return nil, fmt.Errorf("lrclib: status %d", resp.StatusCode)
 	}
 
-	var data struct {
-		SyncedLyrics string `json:"syncedLyrics"`
-		PlainLyrics  string `json:"plainLyrics"`
-		Instrumental bool   `json:"instrumental"`
-	}
+	var data lyricRecord
 	if err := json.NewDecoder(resp.Body).Decode(&data); err != nil {
 		return nil, err
 	}
 
+	return data.result()
+}
+func (data lyricRecord) result() (*Result, error) {
 	if data.Instrumental {
 		return &Result{Lines: []Line{{Text: "♪  Instrumental  ♪"}}, Plain: "♪ Instrumental ♪"}, nil
 	}
@@ -123,7 +125,7 @@ func (c *Client) fetch(ctx context.Context, artist, title, album string, duratio
 		return &Result{Lines: lines, Plain: data.PlainLyrics}, nil
 	}
 
-	return nil, fmt.Errorf("no lyrics available")
+	return nil, errNotFound
 }
 
 // parseLRC parses lines in LRC format: [mm:ss.xx] text
@@ -135,19 +137,30 @@ func parseLRC(lrc string) ([]Line, error) {
 		if raw == "" || !strings.HasPrefix(raw, "[") {
 			continue
 		}
-		idx := strings.Index(raw, "]")
-		if idx < 0 {
+		// LRC may reuse one lyric across multiple timestamps.
+		var starts []time.Duration
+		for strings.HasPrefix(raw, "[") {
+			idx := strings.Index(raw, "]")
+			if idx < 0 {
+				break
+			}
+			d, err := parseLRCTimestamp(raw[1:idx])
+			if err != nil {
+				break
+			}
+			starts = append(starts, d)
+			raw = strings.TrimSpace(raw[idx+1:])
+		}
+		if len(starts) == 0 {
 			continue
 		}
-		d, err := parseLRCTimestamp(raw[1:idx])
-		if err != nil {
-			continue
-		}
-		label, text := splitSpeaker(strings.TrimSpace(raw[idx+1:]))
+		label, text := splitSpeaker(raw)
 		if label != "" {
 			speaker = label
 		}
-		lines = append(lines, Line{Start: d, Text: text, Speaker: speaker})
+		for _, start := range starts {
+			lines = append(lines, Line{Start: start, Text: text, Speaker: speaker})
+		}
 	}
 	slices.SortStableFunc(lines, func(a, b Line) int { return cmp.Compare(a.Start, b.Start) })
 	return lines, nil
