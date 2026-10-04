@@ -17,9 +17,10 @@ func (l Locale) Text(s string) string {
 }
 
 var chinese = map[string]string{
-	"Queue":            "播放队列",
-	"  %d tracks":      "  %d 首",
-	"  Queue is empty": "  队列为空",
+	"Terminal too small": "终端窗口太小",
+	"Queue":              "播放队列",
+	"  %d tracks":        "  %d 首",
+	"  Queue is empty":   "  队列为空",
 	"Queue is empty. Browse library or search to add tracks.": "队列为空，请浏览音乐库或搜索歌曲。",
 	"silence is not a vibe":                                   "选一首喜欢的歌吧",
 	"made with ❤️ by simonepelosi · press ? for about":        "作者 simonepelosi · 按 ? 查看关于",

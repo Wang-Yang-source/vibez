@@ -3051,6 +3051,9 @@ func (m *Model) View() tea.View {
 //	│ ʕ•ᴥ•ʔ > / search  n next  :q quit  │
 //	└─────────────────────────────────────┘
 func (m *Model) renderBoxLayout() string {
+	if m.width < 12 || m.height < 8 {
+		return ansi.Truncate(m.ui.Text("Terminal too small"), max(0, m.width), "")
+	}
 	inner := m.width - 2 // visual width between the │ border chars
 	npH := m.nowPlayingHeight()
 	panelH := m.panelHeight()
