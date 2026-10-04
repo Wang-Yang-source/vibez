@@ -1,10 +1,11 @@
 package tui
 
 import (
-	tea "charm.land/bubbletea/v2"
-	"charm.land/lipgloss/v2"
 	"strings"
 	"testing"
+
+	tea "charm.land/bubbletea/v2"
+	"charm.land/lipgloss/v2"
 )
 
 func TestCleanLayoutHasNoShortcutFooter(t *testing.T) {

@@ -1,9 +1,10 @@
 package tui
 
 import (
+	"strings"
+
 	"github.com/simone-vibes/vibez/internal/provider"
 	"github.com/simone-vibes/vibez/internal/tui/styles"
-	"strings"
 )
 
 // Use the existing built-in palettes; classification follows catalog metadata.

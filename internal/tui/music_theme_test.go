@@ -1,9 +1,10 @@
 package tui
 
 import (
+	"testing"
+
 	"github.com/simone-vibes/vibez/internal/provider"
 	"github.com/simone-vibes/vibez/internal/tui/styles"
-	"testing"
 )
 
 func TestMusicThemeFollowsGenreAndRestoresCustomBase(t *testing.T) {
