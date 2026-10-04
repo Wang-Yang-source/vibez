@@ -1,6 +1,7 @@
 package views
 
 import (
+	"errors"
 	"github.com/simone-vibes/vibez/internal/tui/locale"
 	"strings"
 	"time"
@@ -13,6 +14,7 @@ import (
 // Call SetLoading when a fetch starts, SetLyrics when it completes, and
 // SetPosition on every player-state update so the current line is highlighted.
 type LyricsModel struct {
+	notFound       bool
 	Locale         locale.Locale
 	lines          []lyrics.Line
 	synced         bool
@@ -49,6 +51,7 @@ func (l *LyricsModel) SetLyrics(res *lyrics.Result, err error) {
 	l.loading = false
 	if err != nil {
 		l.errMsg = err.Error()
+		l.notFound = errors.Is(err, lyrics.ErrNotFound)
 		l.lines = nil
 		return
 	}
@@ -115,3 +118,5 @@ func (l *LyricsModel) Update(msg tea.KeyPressMsg) tea.Cmd {
 func (l *LyricsModel) View() string {
 	return strings.Join(l.InlineLines(l.width, l.height), "\n")
 }
+
+func (l *LyricsModel) HasError() bool { return l.errMsg != "" }

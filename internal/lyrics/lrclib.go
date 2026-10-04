@@ -45,7 +45,8 @@ func NewClient() *Client {
 // Fetch retrieves lyrics for a track. It prefers synced (LRC) lyrics and
 // falls back to plain lyrics when timing data is unavailable.
 // duration is used as a search hint; pass 0 if unknown.
-var errNotFound = errors.New("lyrics not found")
+var ErrNotFound = errors.New("lyrics not found")
+var errNotFound = ErrNotFound
 
 func (c *Client) Fetch(ctx context.Context, artist, title, album string, duration time.Duration) (*Result, error) {
 	result, err := c.fetch(ctx, artist, title, album, duration)

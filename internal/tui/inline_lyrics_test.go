@@ -1,6 +1,7 @@
 package tui
 
 import (
+	"fmt"
 	"image"
 	"strings"
 	"testing"
@@ -54,5 +55,16 @@ func TestInlineLyricsKeepCoverOnLeftAndPanelsBelow(t *testing.T) {
 	m.handleNormalKey(tea.KeyPressMsg{Text: "y"}, "y")
 	if m.inlineLyrics {
 		t.Fatal("y did not hide inline lyrics")
+	}
+}
+
+func TestFailedLyricsRetryWithoutHidingPanel(t *testing.T) {
+	m := newModel(nil)
+	m.cfg.InlineLyrics = true
+	m.inlineLyrics = true
+	m.playerState.Track = &provider.Track{ID: "song", Title: "测试"}
+	m.lyricsP.m.SetLyrics(nil, fmt.Errorf("lrclib: status 503"))
+	if m.handleNormalKey(tea.KeyPressMsg{Text: "y"}, "y") == nil || !m.inlineLyrics {
+		t.Fatal("retry hides panel or does not fetch")
 	}
 }
