@@ -18,7 +18,15 @@ import (
 
 // Line is a single lyric line with an optional start timestamp.
 // For plain (unsynced) lyrics, Start is always 0.
+type Word struct {
+	Start time.Duration
+	End   time.Duration
+	Text  string
+}
+
 type Line struct {
+	Words   []Word
+	End     time.Duration
 	Speaker string
 	Start   time.Duration
 	Text    string
@@ -33,8 +41,10 @@ type Result struct {
 
 // Client is a thin HTTP wrapper around the LRCLIB API.
 type Client struct {
-	http    *http.Client
-	baseURL string
+	Enhanced    bool
+	enhancedURL string
+	http        *http.Client
+	baseURL     string
 }
 
 // NewClient returns a Client ready for use.
@@ -49,6 +59,14 @@ var ErrNotFound = errors.New("lyrics not found")
 var errNotFound = ErrNotFound
 
 func (c *Client) Fetch(ctx context.Context, artist, title, album string, duration time.Duration) (*Result, error) {
+	if c.Enhanced {
+		enhancedCtx, cancel := context.WithTimeout(ctx, 4*time.Second)
+		result, err := c.fetchEnhanced(enhancedCtx, artist, title, duration)
+		cancel()
+		if err == nil && result != nil && len(result.Lines) > 0 {
+			return result, nil
+		}
+	}
 	result, err := c.fetch(ctx, artist, title, album, duration)
 	if errors.Is(err, errNotFound) && (album != "" || duration > 0) {
 		result, err = c.fetch(ctx, artist, title, "", 0)
@@ -160,7 +178,9 @@ func parseLRC(lrc string) ([]Line, error) {
 			speaker = label
 		}
 		for _, start := range starts {
-			lines = append(lines, Line{Start: start, Text: text, Speaker: speaker})
+			line := Line{Start: start, Text: text, Speaker: speaker}
+			line.Text, line.Words = parseEnhancedLRC(text, start-durationsFirst(starts))
+			lines = append(lines, line)
 		}
 	}
 	slices.SortStableFunc(lines, func(a, b Line) int { return cmp.Compare(a.Start, b.Start) })

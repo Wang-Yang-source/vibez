@@ -422,6 +422,7 @@ func New(cfg *config.Config, prov provider.Provider, plyr player.Player, opts Op
 	m.queue = &queuePanel{m: views.NewQueue()}
 	m.lyricsP = &lyricsPanel{m: views.NewLyrics()}
 	m.lyricsClient = lyrics.NewClient()
+	m.lyricsClient.Enhanced = cfg.EnhancedLyrics
 	m.feedP = &feedPanel{m: views.NewFeed()}
 	eqBands := configEQBandsToPlayer(cfg.EQBands)
 	m.eqP = &eqPanel{m: views.NewEqualizer(eqBands)}
