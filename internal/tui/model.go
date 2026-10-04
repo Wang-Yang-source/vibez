@@ -299,6 +299,8 @@ type Model struct {
 	artworkGen          int
 	artHTTP             *http.Client
 	hideHints           bool
+	baseTheme           styles.Theme
+	musicTheme          string
 	supportsArtColor    func() bool
 	supportsArtGraphics func() bool
 	artCellAsp          float64          // terminal cell height/width ratio, for square art
@@ -391,7 +393,7 @@ func New(cfg *config.Config, prov provider.Provider, plyr player.Player, opts Op
 		memProfiling: opts.MemProfiling,
 		preMuteVol:   -1,
 		artMode:      cfg.AlbumArt,
-		hideHints:    true,
+		hideHints:    cfg.HideHints,
 		artwork:      artworkCache{rendered: map[art.Size][]string{}},
 		artHTTP:      &http.Client{Timeout: 5 * time.Second},
 		// Album art needs at least a 256-colour terminal to look reasonable;
@@ -401,6 +403,11 @@ func New(cfg *config.Config, prov provider.Provider, plyr player.Player, opts Op
 		// Measured cell height/width ratio, so album art renders as a true square.
 		artCellAsp: cellAspect(),
 	}
+	m.baseTheme = styles.DefaultTheme()
+	if opts.BaseTheme != nil {
+		m.baseTheme = *opts.BaseTheme
+	}
+	m.musicTheme = "base"
 	if plyr != nil {
 		m.stateCh = plyr.Subscribe()
 	}
@@ -539,6 +546,7 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case playerStateMsg:
 		wasPlaying := m.playerState.Playing
 		s := player.State(msg)
+		m.syncMusicTheme(s.Track)
 		for _, line := range s.Logs {
 			m.appendLog(line)
 		}
@@ -3150,6 +3158,9 @@ func (m *Model) renderIntro() string {
 // renderBoxHeader builds the header line including the border chars.
 func (m *Model) renderBoxHeader(inner int) string {
 	bear := views.BearExpr(m.glowStep, m.playerState.Playing)
+	if mascot := m.musicMascot(); mascot != "" {
+		bear = styles.BearStyle.Render(mascot)
+	}
 	title := views.RenderGlowTitle("vibez ♪", m.glowStep)
 
 	vol := int(m.playerState.Volume * 100)

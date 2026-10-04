@@ -8,7 +8,9 @@ import (
 )
 
 func TestCleanLayoutHasNoShortcutFooter(t *testing.T) {
-	m := New(testCfg(), &mockProvider{}, nil, Options{})
+	cfg := testCfg()
+	cfg.HideHints = true
+	m := New(cfg, &mockProvider{}, nil, Options{})
 	m.Update(tea.WindowSizeMsg{Width: 100, Height: 40})
 	m.introStep = introDone
 	for _, mode := range []viewMode{modeNormal, modeSearch} {
