@@ -1,8 +1,9 @@
 package tui
 
 import (
-	tea "charm.land/bubbletea/v2"
 	"testing"
+
+	tea "charm.land/bubbletea/v2"
 )
 
 func TestSearchCursorAnchorsIMEToInput(t *testing.T) {
