@@ -136,6 +136,9 @@ func (l *LyricsModel) View() string {
 	end := min(l.scroll+max(l.height-2, 1), len(l.lines))
 	for i := l.scroll; i < end; i++ {
 		text := l.lines[i].Text
+		if l.lines[i].Speaker != "" {
+			text = l.lines[i].Speaker + " · " + text
+		}
 		if text == "" {
 			sb.WriteByte('\n')
 			continue

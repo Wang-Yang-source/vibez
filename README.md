@@ -478,3 +478,17 @@ go run . --demo
 ## License
 
 MIT © Simone Pelosi
+
+
+### Cover and rolling lyrics
+
+Set `"inline_lyrics": true` in your existing config. On a wide terminal the
+cover and track information appear on the left, with synchronized lyrics on
+the right; Queue and Vibe remain below. Press `y` to hide/show inline lyrics.
+Narrow terminals stack the cover and lyrics.
+
+Explicit singer labels such as `甲：`, `乙：`, `[男]`, `[女]`, or `【合唱】`
+are preserved. The first two singers align left/right inside the lyric area;
+chorus lines are centered. Lines at the same timestamp highlight together.
+Lyrics without speaker labels keep the normal single-voice display; the app
+does not guess singers from audio. Missing lyrics display a placeholder.
