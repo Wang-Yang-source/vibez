@@ -52,7 +52,7 @@ func TestRenderHTMLClearsRestrictionBeforeApplyingToken(t *testing.T) {
 		t.Fatalf("RenderHTML: %v", err)
 	}
 	clear := strings.Index(html, "music.restrictedEnabled = false")
-	token := strings.Index(html, "music.musicUserToken = savedToken")
+	token := strings.Index(html, "await restoreSavedSession(savedToken)")
 	if clear < 0 || token < 0 {
 		t.Fatalf("markers not found: restrictedEnabled=%d musicUserToken=%d", clear, token)
 	}

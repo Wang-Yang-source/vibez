@@ -80,6 +80,15 @@
 
       try { applyAudioBitrate({{.AudioBitrateKbps}}); } catch(e) { goError(e.message || String(e)).catch(() => {}); }
 
+      // errName extracts a human-readable description from MusicKit errors.
+      const errName = (e) => {
+        if (!e) return '';
+        const name = (typeof e.name === 'string' && e.name) ? e.name : '';
+        const msg  = (typeof e.message === 'string' && e.message) ? e.message : '';
+        if (name && msg && name !== 'Error') return name + ': ' + msg;
+        return msg || name || String(e);
+      };
+
       // isAuthError returns true when an error indicates an expired/invalid token.
       const isAuthError = (e) => {
         if (!e) return false;
@@ -89,10 +98,22 @@
                s.includes('expired token');
       };
 
+      // Restoring a token alone leaves StoreKit's account country at its cached
+      // default. A configured catalog country must match the account country,
+      // otherwise MusicKit rejects setQueue/play with CONTENT_EQUIVALENT.
+      async function restoreSavedSession(token) {
+        music.musicUserToken = token;
+        const storekit = music.getPlaybackController?.()?.storekit;
+        if (typeof storekit?.requestStorefrontCountryCode !== 'function') {
+          throw new Error('MusicKit cannot restore the account region');
+        }
+        await storekit.requestStorefrontCountryCode();
+      }
+
       const savedToken = '{{.UserToken}}';
       if (savedToken !== '') {
         try {
-          music.musicUserToken = savedToken;
+          await restoreSavedSession(savedToken);
         } catch(e) {
           if (isAuthError(e)) {
             await goNeedsAuth('expired').catch(() => {});
@@ -106,15 +127,6 @@
       // goStreamURL is only bound in GStreamer (WebKit fallback) mode.
       // In Chrome mode it is absent and MusicKit plays natively.
       const GSTREAMER_MODE = typeof goStreamURL === 'function';
-
-      // errName extracts a human-readable description from MusicKit errors.
-      const errName = (e) => {
-        if (!e) return '';
-        const name = (typeof e.name === 'string' && e.name) ? e.name : '';
-        const msg  = (typeof e.message === 'string' && e.message) ? e.message : '';
-        if (name && msg && name !== 'Error') return name + ': ' + msg;
-        return msg || name || String(e);
-      };
 
       // ── State notification ───────────────────────────────────────────────
       function notifyStateFromItem(item, isPlaying) {
