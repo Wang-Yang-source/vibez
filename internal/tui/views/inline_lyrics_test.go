@@ -18,17 +18,17 @@ func TestInlineDuetAlignsBothVoicesAndCentersChorus(t *testing.T) {
 	}}, nil)
 	m.SetPosition(time.Second)
 	rows := m.InlineLines(60, 10)
-	if !strings.HasPrefix(ansi.Strip(rows[0]), "甲") {
+	if !strings.HasPrefix(strings.TrimSpace(ansi.Strip(rows[5])), "甲") {
 		t.Fatal("first singer not aligned left")
 	}
-	if !strings.HasSuffix(ansi.Strip(rows[1]), "第二句") || !strings.HasPrefix(ansi.Strip(rows[1]), " ") {
+	if !strings.HasSuffix(ansi.Strip(rows[6]), "第二句") || !strings.HasPrefix(ansi.Strip(rows[6]), " ") {
 		t.Fatal("second singer not aligned right")
 	}
-	if !strings.HasPrefix(ansi.Strip(rows[2]), " ") {
+	if !strings.HasPrefix(ansi.Strip(rows[8]), " ") {
 		t.Fatal("chorus not centered")
 	}
 	// Both active lines use the same highlighted style, including bold.
-	for _, row := range rows[:2] {
+	for _, row := range rows[5:7] {
 		if !strings.Contains(row, "\x1b[1;") && !strings.Contains(row, "\x1b[1m") {
 			t.Fatalf("simultaneous singer not highlighted: %q", row)
 		}

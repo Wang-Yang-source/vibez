@@ -6,24 +6,27 @@ import (
 	"time"
 
 	tea "charm.land/bubbletea/v2"
-	"charm.land/lipgloss/v2"
 	"github.com/simone-vibes/vibez/internal/lyrics"
-	"github.com/simone-vibes/vibez/internal/tui/styles"
 )
 
 // LyricsModel renders a scrollable lyrics panel.
 // Call SetLoading when a fetch starts, SetLyrics when it completes, and
 // SetPosition on every player-state update so the current line is highlighted.
 type LyricsModel struct {
-	Locale     locale.Locale
-	lines      []lyrics.Line
-	synced     bool
-	loading    bool
-	errMsg     string
-	currentIdx int // index of the currently active line (-1 = none)
-	scroll     int // index of the top visible line
-	width      int
-	height     int
+	Locale         locale.Locale
+	lines          []lyrics.Line
+	synced         bool
+	loading        bool
+	errMsg         string
+	viewportOffset int
+	viewportTarget int
+	viewportReady  bool
+	viewportWidth  int
+	viewportHeight int
+	currentIdx     int // index of the currently active line (-1 = none)
+	scroll         int // index of the top visible line
+	width          int
+	height         int
 }
 
 func NewLyrics() *LyricsModel {
@@ -32,6 +35,7 @@ func NewLyrics() *LyricsModel {
 
 // SetLoading transitions the panel into a fetching state.
 func (l *LyricsModel) SetLoading() {
+	l.viewportReady = false
 	l.loading = true
 	l.lines = nil
 	l.errMsg = ""
@@ -41,6 +45,7 @@ func (l *LyricsModel) SetLoading() {
 
 // SetLyrics transitions the panel to the loaded (or error) state.
 func (l *LyricsModel) SetLyrics(res *lyrics.Result, err error) {
+	l.viewportReady = false
 	l.loading = false
 	if err != nil {
 		l.errMsg = err.Error()
@@ -108,52 +113,5 @@ func (l *LyricsModel) Update(msg tea.KeyPressMsg) tea.Cmd {
 
 // View renders the lyrics panel as a newline-separated string.
 func (l *LyricsModel) View() string {
-	muted := styles.QueueItemMuted
-	normal := lipgloss.NewStyle().Foreground(styles.ColorFg)
-	current := styles.Playing.Bold(true)
-	header := styles.TabActive
-
-	if l.loading {
-		return header.Render(l.Locale.Text("Lyrics")) + "\n" +
-			strings.Repeat("─", 5) + "\n\n" +
-			muted.Render(l.Locale.Text("fetching lyrics…"))
-	}
-
-	if l.errMsg != "" {
-		return header.Render(l.Locale.Text("Lyrics")) + "\n" +
-			strings.Repeat("─", 5) + "\n\n" +
-			muted.Render(l.Locale.Text("You cannot sing this song :("))
-	}
-
-	if len(l.lines) == 0 {
-		return header.Render(l.Locale.Text("Lyrics")) + "\n" +
-			strings.Repeat("─", 5) + "\n\n" +
-			muted.Render(l.Locale.Text("no lyrics found"))
-	}
-
-	var sb strings.Builder
-	sb.WriteString(header.Render(l.Locale.Text("Lyrics")) + "\n")
-	sb.WriteString(muted.Render(strings.Repeat("─", 5)) + "\n")
-
-	end := min(l.scroll+max(l.height-2, 1), len(l.lines))
-	for i := l.scroll; i < end; i++ {
-		text := l.lines[i].Text
-		if l.lines[i].Speaker != "" {
-			text = l.lines[i].Speaker + " · " + text
-		}
-		if text == "" {
-			sb.WriteByte('\n')
-			continue
-		}
-		switch {
-		case i == l.currentIdx:
-			sb.WriteString(current.Render(text))
-		case l.synced && i < l.currentIdx:
-			sb.WriteString(muted.Render(text))
-		default:
-			sb.WriteString(normal.Render(text))
-		}
-		sb.WriteByte('\n')
-	}
-	return sb.String()
+	return strings.Join(l.InlineLines(l.width, l.height), "\n")
 }
