@@ -22,7 +22,6 @@
 <p align="center">
   If you enjoy vibez, consider supporting its development — it helps keep the project alive! ☕<br><br>
   <img src="https://progress-bar.xyz/0/?title=Apple%20Dev%20Key%20Goal%20%28%240%2F%24100%29&color=ff5e5b&width=400" alt="Apple Developer Key Progress"><br><br>
-  <a href="https://ko-fi.com/pelpsi"><img src="https://img.shields.io/badge/☕_buy_me_a_coffee-donate-ff5e5b?style=for-the-badge" alt="Donate on Ko-fi"></a>
 </p>
 
 [Installation](#installation) · [Usage](#usage) · [Features](#features) · [Key Bindings](#key-bindings) · [Roadmap](#roadmap)
@@ -211,6 +210,25 @@ Set the `theme` key in `~/.config/vibez/config.json`:
 
 **Built-in themes:** `default`, `dracula`, `gruvbox`, `nord`
 
+
+### Optional music interface
+
+Add these keys to your existing config to hide the shortcut footers and let
+track genre metadata select a built-in palette and header character:
+
+```json
+{
+  "hide_hints": true,
+  "genre_theme": true
+}
+```
+
+Both options default to `false`. Shortcuts still work with hints hidden.
+Rock/electronic uses Dracula, hip-hop/R&B/jazz uses Gruvbox, classical/ambient
+uses Nord, and pop uses the default palette. Missing or unknown genres restore
+your selected startup theme. Queue metadata is used when playback items omit
+genres. This uses catalog tags, not audio analysis.
+
 ### Custom themes
 
 Create `~/.config/vibez/themes/<name>.json` with any subset of fields — missing or invalid values fall back to `default`:
@@ -303,6 +321,10 @@ Then set `"theme": "<name>"` in `config.json` and restart vibez.
 | `R` | Toggle radio mode (seeded by the highlighted track) |
 | `esc` | Close |
 
+Album art uses the existing Kitty graphics encoder on Ghostty and Kitty outside
+tmux. Covers retain their image resolution and resize with the panel. Other
+terminals keep the coloured half-block renderer. Enable it with `:art`.
+
 ### Command mode (`:`)
 
 Vim-style command mode — press `:` from anywhere to open the command prompt.
@@ -314,7 +336,7 @@ Vim-style command mode — press `:` from anywhere to open the command prompt.
 | `:vol <0-100>` | Set volume to an absolute level (e.g. `:vol 80`) |
 | `:vol +n` / `:vol -n` | Raise or lower volume by *n* percent (e.g. `:vol +10`) |
 | `:vol` | Show current volume in the status bar |
-| `:art` | Toggle the album-art view: the cover (rendered as coloured half-blocks) with track, album, and elapsed time in place of the progress bar |
+| `:art` | Toggle the album-art view: the cover (full-resolution images in Ghostty/Kitty; coloured half-blocks elsewhere) with track, album, and elapsed time in place of the progress bar |
 | `:mute` | Toggle mute (run again to restore the previous volume) |
 | `:quality <high|standard|256|64>` | Set Apple Music AAC bitrate |
 | `:seek <seconds>` | Jump to an absolute position in the current song |
@@ -452,3 +474,11 @@ go run . --demo
 ## License
 
 MIT © Simone Pelosi
+
+### Chinese search input
+
+Press `/`, then type or paste Unicode search text such as `周杰伦 范特西`.
+The search cursor follows terminal cell widths so Chinese IME candidates stay
+next to the input. Long queries scroll horizontally to keep the cursor visible.
+Press `Esc` to close search. While playing, `y` opens the lyrics panel; available
+lyrics are fetched from LRCLIB and synchronized lyrics follow playback.
