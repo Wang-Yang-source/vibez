@@ -214,16 +214,23 @@ Set the `theme` key in `~/.config/vibez/config.json`:
 ### Optional music interface
 
 Add these keys to your existing config to hide the shortcut footers and let
-track genre metadata select a built-in palette and header character:
+the cover image set the text and accent colors:
 
 ```json
 {
   "hide_hints": true,
-  "genre_theme": true
+  "cover_theme": true,
+  "genre_theme": false
 }
 ```
 
-Both options default to `false`. Shortcuts still work with hints hidden.
+All options default to `false`. `cover_theme` derives text and accent colors from
+the current cover, with brighter text for dark covers. It takes precedence over
+`genre_theme` and restores the startup palette when artwork is unavailable.
+Color extraction runs with the artwork download, outside the UI event loop.
+
+`genre_theme` optionally selects genre palettes instead of cover colors.
+Shortcuts still work with hints hidden.
 Rock/electronic uses Dracula, hip-hop/R&B/jazz uses Gruvbox, classical/ambient
 uses Nord, and pop uses the default palette. Missing or unknown genres restore
 your selected startup theme. Queue metadata is used when playback items omit
