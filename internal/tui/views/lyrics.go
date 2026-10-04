@@ -147,3 +147,21 @@ func (l *LyricsModel) lineProgress(index int) (int, float64) {
 	}
 	return lyrics.Progress(line, end, l.position)
 }
+
+// A singer label introduces a vocal section; blank interludes are never labels.
+func (l *LyricsModel) speakerPrefix(index int) string {
+	line := l.lines[index]
+	if line.Speaker == "" || strings.TrimSpace(line.Text) == "" {
+		return ""
+	}
+	for previous := index - 1; previous >= 0; previous-- {
+		if strings.TrimSpace(l.lines[previous].Text) == "" {
+			continue
+		}
+		if l.lines[previous].Speaker == line.Speaker {
+			return ""
+		}
+		break
+	}
+	return line.Speaker + " · "
+}

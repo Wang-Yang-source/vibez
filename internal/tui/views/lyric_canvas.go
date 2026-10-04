@@ -80,10 +80,7 @@ func (r *LyricRenderer) RenderCanvas(l *LyricsModel, width, height int) image.Im
 		if i == anchor {
 			anchorY = cursor
 		}
-		text := line.Text
-		if line.Speaker != "" {
-			text = line.Speaker + " · " + text
-		}
+		text := l.speakerPrefix(i) + line.Text
 		offset, start := 0, 0
 		g := uniseg.NewGraphemes(text)
 		for g.Next() {
@@ -149,9 +146,7 @@ func (r *LyricRenderer) RenderCanvas(l *LyricsModel, width, height int) image.Im
 			highlight := textW
 			if l.synced {
 				complete, partial := l.lineProgress(phrase.source)
-				if line.Speaker != "" {
-					complete += len(line.Speaker + " · ")
-				}
+				complete += len(l.speakerPrefix(phrase.source))
 				complete = min(max(0, complete-phrase.offset), len(phrase.text))
 				highlight = font.MeasureString(face, phrase.text[:complete]).Ceil()
 				if complete < len(phrase.text) {

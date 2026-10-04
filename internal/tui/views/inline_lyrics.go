@@ -55,10 +55,7 @@ func (l *LyricsModel) InlineLines(w, h int) []string {
 		if i == anchor {
 			anchorRow = len(visual)
 		}
-		text := line.Text
-		if line.Speaker != "" {
-			text = line.Speaker + " · " + text
-		}
+		text := l.speakerPrefix(i) + line.Text
 		offset := 0
 		for _, part := range strings.Split(ansi.Wrap(text, blockW, ""), "\n") {
 			partStart := offset
@@ -118,9 +115,7 @@ func (l *LyricsModel) InlineLines(w, h int) []string {
 		rendered := style.Render(item.text)
 		if active {
 			completed, _ := l.lineProgress(item.source)
-			if line.Speaker != "" {
-				completed += len(line.Speaker + " · ")
-			}
+			completed += len(l.speakerPrefix(item.source))
 			split := min(max(0, completed-item.offset), len(item.text))
 			rendered = style.Render(item.text[:split]) + lipgloss.NewStyle().Foreground(styles.ColorMuted).Bold(true).Render(item.text[split:])
 		}
